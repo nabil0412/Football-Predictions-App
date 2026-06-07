@@ -20,3 +20,18 @@ Thumbs.db
 # editor
 .vscode/
 *.swp
+
+# design/planning docs — not part of the app
+DESIGN_BRIEF.md
+world_cup_predictions_game_plan.md
+WC\ 2026\ Predictions\ \(standalone\).html
+foorball\ predictions/
+foorball\ predictions.zip
+*.JPG
+*.jpg
+*.png
+*.zip
+proxy.ts
+
+# build artifacts
+tsconfig.tsbuildinfo
