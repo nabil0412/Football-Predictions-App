@@ -1,0 +1,22 @@
+# dependencies
+node_modules/
+
+# Next.js build
+.next/
+out/
+
+# env files — never commit secrets
+.env
+.env.local
+.env.*.local
+
+# Drizzle migrations (generated, not secret — include if you want)
+# drizzle/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# editor
+.vscode/
+*.swp

@@ -1,0 +1,258 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-lg: var(--radius);
+}
+
+/* ─── Design tokens ─────────────────────────────────────── */
+:root {
+  --wc-bg:          #06101e;   /* page background */
+  --wc-surface:     #0e1e33;   /* cards */
+  --wc-surface-alt: #15283f;   /* elevated / nested */
+  --wc-border:      #1f3450;   /* borders */
+  --wc-text-1:      #f0f6ff;   /* headings */
+  --wc-text-2:      #8bacc8;   /* secondary */
+  --wc-text-3:      #445e7a;   /* muted */
+  --wc-green:       #22c55e;
+  --wc-red:         #f87171;   /* LIVE only */
+
+  /* Shadcn compat */
+  --background:         #06101e;
+  --foreground:         #f0f6ff;
+  --card:               #0e1e33;
+  --card-foreground:    #f0f6ff;
+  --popover:            #0e1e33;
+  --popover-foreground: #f0f6ff;
+  --primary:            #22c55e;
+  --primary-foreground: #000;
+  --secondary:          #15283f;
+  --secondary-foreground:#f0f6ff;
+  --muted:              #15283f;
+  --muted-foreground:   #445e7a;
+  --accent:             #15283f;
+  --accent-foreground:  #f0f6ff;
+  --destructive:        #f87171;
+  --border:             #1f3450;
+  --input:              #15283f;
+  --ring:               #22c55e;
+  --radius:             0.75rem;
+}
+
+/* ─── Base ──────────────────────────────────────────────── */
+@layer base {
+  * { box-sizing: border-box; }
+  html { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+  body {
+    background: var(--wc-bg);
+    color: var(--wc-text-1);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  * { border-color: var(--wc-border); }
+}
+
+/* ─── Keyframes ─────────────────────────────────────────── */
+@keyframes pulseDot {
+  0%, 100% { opacity:1; transform:scale(1); }
+  50%       { opacity:0.35; transform:scale(0.65); }
+}
+@keyframes scaleIn {
+  from { transform:scaleY(0); opacity:0; }
+  to   { transform:scaleY(1); opacity:1; }
+}
+@keyframes slideUp {
+  from { transform:translateY(10px); opacity:0; }
+  to   { transform:translateY(0); opacity:1; }
+}
+@keyframes pulseMe {
+  0%,100% { box-shadow:none; }
+  50%     { box-shadow:0 0 0 4px rgba(34,197,94,0.12); }
+}
+
+/* ─── Match card ────────────────────────────────────────── */
+.match-card {
+  background: var(--wc-surface);
+  border: 1px solid var(--wc-border);
+  border-radius: 16px;
+  overflow: hidden;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  cursor: pointer;
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+.match-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(0,0,0,0.45);
+  border-color: rgba(34,197,94,0.35);
+}
+.match-card.live  { background:rgba(248,113,113,0.05); border-color:rgba(248,113,113,0.3); }
+.match-card.done  { cursor:pointer; }
+.match-card.done:hover { border-color: var(--wc-border); transform:none; box-shadow:none; }
+.match-card.locked { cursor:default; }
+.match-card.locked:hover { transform:none; box-shadow:none; border-color: var(--wc-border); }
+
+.predict-cta {
+  border-top: 1px solid rgba(34,197,94,0.15);
+  background: rgba(34,197,94,0.05);
+  padding: 10px 20px;
+  display: flex; align-items:center; justify-content:center; gap:6px;
+  font-size:12px; font-weight:700; color:var(--wc-green);
+  transition: background 0.15s;
+}
+.match-card:hover .predict-cta {
+  background: rgba(34,197,94,0.1);
+}
+
+/* ─── Section divider ───────────────────────────────────── */
+.section-divider { cursor: pointer; }
+.section-divider:hover .section-label { color: var(--wc-text-1); }
+
+/* ─── Nav links ─────────────────────────────────────────── */
+.nav-link {
+  padding: 6px 14px; border-radius: 99px;
+  font-size:13px; font-weight:600;
+  color: var(--wc-text-2);
+  text-decoration:none;
+  transition: color 0.15s, background 0.15s;
+}
+.nav-link:hover { color:var(--wc-text-1); background:rgba(255,255,255,0.05); }
+.nav-link.active { color:var(--wc-text-1); background:rgba(34,197,94,0.12); }
+
+/* ─── Goal picker buttons ───────────────────────────────── */
+.goal-btn {
+  flex:1; min-height:48px; border-radius:10px;
+  background: var(--wc-surface-alt);
+  border: 1.5px solid var(--wc-border);
+  color: var(--wc-text-2);
+  font-size:16px; font-weight:800;
+  cursor:pointer; font-variant-numeric:tabular-nums;
+  transition: all 0.12s;
+}
+.goal-btn:hover:not(:disabled) { border-color: var(--wc-green); color: var(--wc-text-1); }
+.goal-btn.active { background:var(--wc-green); border-color:var(--wc-green); color:#000; }
+.goal-btn:disabled { opacity:0.4; cursor:not-allowed; }
+
+/* ─── Wildcard cards ────────────────────────────────────── */
+.wildcard-card {
+  display:flex; align-items:center; gap:12px; padding:12px 14px;
+  border-radius:12px;
+  background: var(--wc-surface-alt);
+  border: 1.5px solid var(--wc-border);
+  cursor:pointer; text-align:left;
+  transition: border-color 0.15s, background 0.15s;
+  width:100%;
+}
+.wildcard-card:hover:not(:disabled) { border-color: rgba(34,197,94,0.4); }
+.wildcard-card.active { background:rgba(34,197,94,0.07); border-color:var(--wc-green); }
+.wildcard-card:disabled { opacity:0.4; cursor:not-allowed; }
+
+/* ─── Captain team cells ────────────────────────────────── */
+.captain-cell {
+  display:flex; flex-direction:column; align-items:center; gap:8px;
+  padding:14px 8px; border-radius:12px;
+  background: var(--wc-surface);
+  border: 1px solid var(--wc-border);
+  cursor:pointer; position:relative;
+  transition: all 0.15s;
+}
+.captain-cell:hover:not(:disabled) { border-color:rgba(34,197,94,0.4); background:rgba(34,197,94,0.04); }
+.captain-cell.selected { background:rgba(34,197,94,0.08); border:2px solid var(--wc-green); }
+.captain-cell:disabled { cursor:not-allowed; }
+
+/* ─── League cards ──────────────────────────────────────── */
+.league-card {
+  display:block; width:100%; text-align:left;
+  background: var(--wc-surface);
+  border: 1px solid var(--wc-border);
+  border-radius:16px; padding:16px; cursor:pointer;
+  transition: border-color 0.15s, transform 0.15s;
+  text-decoration:none; color:inherit;
+}
+.league-card:hover { border-color:rgba(34,197,94,0.3); transform:translateY(-1px); }
+
+/* ─── Leaderboard rows ──────────────────────────────────── */
+.lb-row { border-radius:12px; padding:12px 16px; transition: background 0.15s; }
+.lb-row:hover { background:rgba(255,255,255,0.03); }
+
+/* ─── Primary button ────────────────────────────────────── */
+.btn-primary {
+  background: var(--wc-green); color:#000;
+  border:none; border-radius:12px;
+  font-weight:800; cursor:pointer;
+  transition: opacity 0.15s, transform 0.1s;
+}
+.btn-primary:hover:not(:disabled) { opacity:0.9; transform:translateY(-1px); }
+.btn-primary:active { transform:translateY(0); }
+.btn-primary:disabled { background:var(--wc-surface-alt); color:var(--wc-text-3); cursor:not-allowed; }
+
+/* ─── Save/confirm button saved state ──────────────────── */
+.btn-saved { background:rgba(34,197,94,0.12) !important; color:var(--wc-green) !important; }
+
+/* ─── Tab switcher ──────────────────────────────────────── */
+.tab-bar { display:flex; gap:4px; background:var(--wc-surface-alt); border-radius:10px; padding:4px; }
+.tab-btn {
+  flex:1; height:36px; border-radius:8px; border:none; cursor:pointer;
+  font-size:13px; font-weight:700; transition:all 0.15s;
+  background:none; color:var(--wc-text-3);
+}
+.tab-btn.active { background:var(--wc-surface); color:var(--wc-text-1); }
+.tab-btn:hover:not(.active) { color:var(--wc-text-2); }
+
+/* ─── Input fields ──────────────────────────────────────── */
+.wc-input {
+  width:100%; padding:12px 14px; border-radius:10px;
+  background:var(--wc-surface-alt); border:1px solid var(--wc-border);
+  color:var(--wc-text-1); font-size:14px; outline:none;
+  font-family:inherit; box-sizing:border-box;
+  transition: border-color 0.15s;
+}
+.wc-input:focus { border-color:rgba(34,197,94,0.5); }
+
+/* ─── Bottom nav (mobile) ───────────────────────────────── */
+.bottom-nav { display:none; }
+.bottom-nav-item {
+  flex:1; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:3px;
+  text-decoration:none; color:var(--wc-text-3);
+  transition:color 0.15s; border:none; background:none; cursor:pointer;
+}
+.bottom-nav-item.active,
+.bottom-nav-item:hover { color:var(--wc-green); }
+
+/* ─── Misc ──────────────────────────────────────────────── */
+.pulse-dot { animation: pulseDot 1.4s ease-in-out infinite; }
+.slide-up  { animation: slideUp 0.2s ease; }
+.scale-in  { animation: scaleIn 0.4s ease both; transform-origin: bottom; }
+.pulse-me  { animation: pulseMe 2s ease 0.5s both; }
+
+/* ─── Responsive ────────────────────────────────────────── */
+@media (max-width: 639px) {
+  .desktop-nav  { display:none !important; }
+  .bottom-nav   { display:flex !important; }
+  .lb-bar       { display:none !important; }
+  .captain-grid { grid-template-columns: repeat(2,1fr) !important; }
+}
