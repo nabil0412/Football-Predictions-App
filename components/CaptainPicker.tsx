@@ -30,15 +30,15 @@ export function CaptainPicker({ teams, currentCaptainId, locked }: { teams: Team
     const data = await res.json();
     setSaving(false);
     if (!res.ok) { toast.error(data.error); return; }
-    setConfirmed(true);
-    toast.success(`${data.team.name} locked in as your captain!`);
+    if (locked) setConfirmed(true);
+    toast.success(locked ? `${data.team.name} locked in as your captain!` : `${data.team.name} set as your captain — you can change it until the tournament starts`);
     router.refresh();
   }
 
   const confirmLabel = confirmed
     ? `✓ ${teams.find(t => t.id === currentCaptainId)?.name ?? ""} locked in`
     : noChange
-      ? `${teams.find(t => t.id === selected)?.name ?? "This team"} is already your captain`
+      ? `${teams.find(t => t.id === selected)?.name ?? "This team"} is your captain — pick another to change`
       : selected
         ? currentCaptainId && selected !== currentCaptainId
           ? `Update to ${teams.find(t => t.id === selected)?.name ?? ""}`
