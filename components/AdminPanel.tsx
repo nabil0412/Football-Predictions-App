@@ -45,7 +45,7 @@ export function AdminPanel({ matches, teams }: { matches: Match[]; teams: Team[]
     setSyncing(true);
     const res = await fetch("/api/admin/sync-matches", {
       method: "POST",
-      headers: { "x-cron-secret": "" }, // admin UI bypasses secret check — add admin auth in production
+      headers: { "x-cron-secret": process.env.NEXT_PUBLIC_CRON_SECRET ?? "" },
     });
     const data = await res.json();
     setSyncing(false);
