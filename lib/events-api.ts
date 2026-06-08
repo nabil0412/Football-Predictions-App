@@ -1,5 +1,6 @@
 const BASE = "https://soccer.highlightly.net";
 const KEY = process.env.HIGHLIGHTLY_KEY!;
+const RAPIDAPI_HOST = "soccer.highlightly.net";
 
 interface HighlightlyMatch {
   id: string;
@@ -29,7 +30,7 @@ function teamMatch(a: string, b: string) {
 
 async function findMatchId(date: string, homeTeam: string, awayTeam: string): Promise<HighlightlyMatch | null> {
   const res = await fetch(`${BASE}/matches?date=${date}&leagueId=1635`, {
-    headers: { "X-Api-Key": KEY },
+    headers: { "x-rapidapi-key": KEY, "x-rapidapi-host": RAPIDAPI_HOST },
     next: { revalidate: 0 },
   });
   if (!res.ok) return null;
@@ -52,7 +53,7 @@ export async function fetchChaosEventsForMatch(
   if (!match) return [];
 
   const res = await fetch(`${BASE}/matches/${match.id}/events`, {
-    headers: { "X-Api-Key": KEY },
+    headers: { "x-rapidapi-key": KEY, "x-rapidapi-host": RAPIDAPI_HOST },
     next: { revalidate: 0 },
   });
   if (!res.ok) return [];
