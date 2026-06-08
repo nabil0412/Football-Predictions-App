@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import { currentUser } from "@clerk/nextjs/server";
 import { supabaseAdmin } from "@/lib/db";
 import { fetchUnderdogSide } from "@/lib/odds-api";
 
+const ADMIN_EMAIL = "abdelrahman.nabil04@gmail.com";
+
 export async function POST(req: NextRequest) {
-  if (req.headers.get("x-cron-secret") !== process.env.CRON_SECRET) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const cronSecret = req.headers.get("x-cron-secret");
+  if (cronSecret !== process.env.CRON_SECRET) {
+    const user = await currentUser();
+    const isAdmin = user?.emailAddresses.some(e => e.emailAddress === ADMIN_EMAIL);
+    if (!isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const { data: matches } = await supabaseAdmin

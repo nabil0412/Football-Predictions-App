@@ -80,10 +80,7 @@ export function AdminPanel({ matches, teams }: { matches: Match[]; teams: Team[]
 
   async function fetchOdds() {
     setFetchingOdds(true);
-    const res = await fetch("/api/admin/fetch-odds", {
-      method: "POST",
-      headers: { "x-cron-secret": "" },
-    });
+    const res = await fetch("/api/admin/fetch-odds", { method: "POST" });
     const data = await res.json();
     setFetchingOdds(false);
     res.ok ? toast.success(`Updated odds for ${data.updated} matches`) : toast.error(data.error ?? "Failed");
