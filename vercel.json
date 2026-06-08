@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/admin/sync-matches",
-      "schedule": "*/5 * * * *",
+      "schedule": "0 6 * * *",
       "headers": {
         "x-cron-secret": "@cron-secret"
       }
