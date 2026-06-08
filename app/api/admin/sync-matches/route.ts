@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { currentUser } from "@clerk/nextjs/server";
 import { supabaseAdmin } from "@/lib/db";
 import { fetchWorldCupMatches, fetchWorldCupTeams, mapApiStageToDb } from "@/lib/football-api";
 import { fetchChaosEventsForMatch } from "@/lib/events-api";
@@ -20,97 +20,97 @@ function mapStatus(apiStatus: string): "scheduled" | "live" | "finished" | null 
     case "AWARDED":
       return "finished";
     default:
-      return null; // SUSPENDED, POSTPONED, CANCELLED — skip
+      return null;
   }
 }
 
 export async function POST(req: NextRequest) {
   const cronSecret = req.headers.get("x-cron-secret");
   if (cronSecret !== process.env.CRON_SECRET) {
-    // Fall back to Clerk admin check
     const user = await currentUser();
     const isAdmin = user?.emailAddresses.some(e => e.emailAddress === ADMIN_EMAIL);
     if (!isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const [matches, teams] = await Promise.all([
+  // 1. Fetch from external APIs in parallel
+  const [apiMatches, apiTeams] = await Promise.all([
     fetchWorldCupMatches(),
     fetchWorldCupTeams(),
   ]);
 
-  const errors: string[] = [];
+  // 2. Batch upsert all teams in one call
+  const { error: teamErr } = await supabaseAdmin.from("teams").upsert(
+    apiTeams.map(t => ({ name: t.name, flag_url: t.crest, external_id: t.id })),
+    { onConflict: "external_id" }
+  );
+  if (teamErr) return NextResponse.json({ error: `Team upsert failed: ${teamErr.message}` }, { status: 500 });
 
-  // Upsert all teams first
-  for (const team of teams) {
-    const { error } = await supabaseAdmin.from("teams")
-      .upsert({ name: team.name, flag_url: team.crest, external_id: team.id }, { onConflict: "external_id" });
-    if (error) errors.push(`team ${team.name}: ${error.message}`);
-  }
+  // 3. Load all teams + existing matches from DB in parallel (2 queries total)
+  const externalTeamIds = apiTeams.map(t => t.id);
+  const externalMatchIds = apiMatches.map(m => m.id);
 
-  let synced = 0;
+  const [{ data: dbTeams }, { data: dbMatches }] = await Promise.all([
+    supabaseAdmin.from("teams").select("id, external_id").in("external_id", externalTeamIds),
+    supabaseAdmin.from("matches").select("id, external_id, status").in("external_id", externalMatchIds),
+  ]);
+
+  const teamByExtId = Object.fromEntries((dbTeams ?? []).map(t => [t.external_id, t.id]));
+  const existingByExtId = Object.fromEntries((dbMatches ?? []).map(m => [m.external_id, m]));
+
+  // 4. Build match upsert payload
+  const matchRows: object[] = [];
+  const justFinished: Array<{ extId: number; dbId: number; homeScore: number; awayScore: number; stage: string; teamAId: number; teamBId: number; utcDate: string; homeTeam: string; awayTeam: string }> = [];
   let skipped = 0;
-  let scored = 0;
 
-  for (const m of matches) {
+  for (const m of apiMatches) {
     const status = mapStatus(m.status);
     if (status === null) { skipped++; continue; }
 
-    const [{ data: teamA, error: errA }, { data: teamB, error: errB }] = await Promise.all([
-      supabaseAdmin.from("teams").select("id").eq("external_id", m.homeTeam.id).maybeSingle(),
-      supabaseAdmin.from("teams").select("id").eq("external_id", m.awayTeam.id).maybeSingle(),
-    ]);
-    if (!teamA || !teamB) {
-      errors.push(`match ${m.id} (${m.homeTeam.name} vs ${m.awayTeam.name}): team not found — A:${errA?.message} B:${errB?.message}`);
-      skipped++;
-      continue;
-    }
-
-    const { data: existing } = await supabaseAdmin
-      .from("matches")
-      .select("id, status")
-      .eq("external_id", m.id)
-      .maybeSingle();
+    const teamAId = teamByExtId[m.homeTeam.id];
+    const teamBId = teamByExtId[m.awayTeam.id];
+    if (!teamAId || !teamBId) { skipped++; continue; }
 
     const homeScore = status === "finished" ? (m.score.fullTime.home ?? null) : null;
     const awayScore = status === "finished" ? (m.score.fullTime.away ?? null) : null;
     const stage = mapApiStageToDb(m.stage);
 
-    const { error: upsertErr } = await supabaseAdmin.from("matches").upsert({
+    matchRows.push({
       external_id: m.id,
-      team_a_id: teamA.id,
-      team_b_id: teamB.id,
+      team_a_id: teamAId,
+      team_b_id: teamBId,
       kickoff_time: m.utcDate,
       stage,
       status,
       team_a_score: homeScore,
       team_b_score: awayScore,
       matchday: m.matchday ?? null,
-    }, { onConflict: "external_id" });
+    });
 
-    if (upsertErr) {
-      errors.push(`match ${m.id} stage=${stage} status=${status}: ${upsertErr.message}`);
-      skipped++;
-      continue;
+    const existing = existingByExtId[m.id];
+    if (status === "finished" && existing?.status !== "finished" && existing?.id && homeScore != null && awayScore != null) {
+      justFinished.push({ extId: m.id, dbId: existing.id, homeScore, awayScore, stage, teamAId, teamBId, utcDate: m.utcDate, homeTeam: m.homeTeam.name, awayTeam: m.awayTeam.name });
     }
+  }
 
-    synced++;
+  // 5. Batch upsert all matches in one call
+  const { error: matchErr } = await supabaseAdmin.from("matches").upsert(matchRows, { onConflict: "external_id" });
+  if (matchErr) return NextResponse.json({ error: `Match upsert failed: ${matchErr.message}` }, { status: 500 });
 
-    const justFinished = status === "finished" && existing?.status !== "finished";
-    if (justFinished && existing?.id && homeScore != null && awayScore != null) {
-      const chaosEvents = await fetchChaosEventsForMatch(m.utcDate, m.homeTeam.name, m.awayTeam.name);
-      if (chaosEvents.length > 0) {
-        await supabaseAdmin
-          .from("matches")
-          .update({ chaos_events_occurred: chaosEvents } as never)
-          .eq("id", existing.id);
-      }
-      scored += await scoreMatch(existing.id, homeScore, awayScore, stage, teamA.id, teamB.id, chaosEvents);
+  const synced = matchRows.length;
+
+  // 6. Score newly-finished matches (sequential — rare, max 1-2 per run)
+  let scored = 0;
+  for (const f of justFinished) {
+    const chaosEvents = await fetchChaosEventsForMatch(f.utcDate, f.homeTeam, f.awayTeam);
+    if (chaosEvents.length > 0) {
+      await supabaseAdmin.from("matches").update({ chaos_events_occurred: chaosEvents } as never).eq("id", f.dbId);
     }
+    scored += await scoreMatch(f.dbId, f.homeScore, f.awayScore, f.stage, f.teamAId, f.teamBId, chaosEvents);
   }
 
   if (scored > 0) await redis.del(CACHE_KEYS.globalLeaderboard).catch(() => {});
 
-  return NextResponse.json({ synced, scored, skipped, errors: errors.slice(0, 10) });
+  return NextResponse.json({ synced, scored, skipped });
 }
 
 async function scoreMatch(
@@ -170,7 +170,6 @@ async function scoreMatch(
     }
   }
 
-  // Captain stage bonuses for KO rounds
   const koStages = ["round_of_32", "round_of_16", "quarter_final", "semi_final", "final"];
   if (koStages.includes(stage) && teamAScore !== teamBScore) {
     const winningTeamId = teamAScore > teamBScore ? teamAId : teamBId;
