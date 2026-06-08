@@ -38,24 +38,32 @@ export async function POST(req: NextRequest) {
     fetchWorldCupTeams(),
   ]);
 
+  const errors: string[] = [];
+
   // Upsert all teams first
   for (const team of teams) {
-    await supabaseAdmin.from("teams")
+    const { error } = await supabaseAdmin.from("teams")
       .upsert({ name: team.name, flag_url: team.crest, external_id: team.id }, { onConflict: "external_id" });
+    if (error) errors.push(`team ${team.name}: ${error.message}`);
   }
 
   let synced = 0;
+  let skipped = 0;
   let scored = 0;
 
   for (const m of matches) {
     const status = mapStatus(m.status);
-    if (status === null) continue;
+    if (status === null) { skipped++; continue; }
 
-    const [{ data: teamA }, { data: teamB }] = await Promise.all([
+    const [{ data: teamA, error: errA }, { data: teamB, error: errB }] = await Promise.all([
       supabaseAdmin.from("teams").select("id").eq("external_id", m.homeTeam.id).maybeSingle(),
       supabaseAdmin.from("teams").select("id").eq("external_id", m.awayTeam.id).maybeSingle(),
     ]);
-    if (!teamA || !teamB) continue;
+    if (!teamA || !teamB) {
+      errors.push(`match ${m.id} (${m.homeTeam.name} vs ${m.awayTeam.name}): team not found — A:${errA?.message} B:${errB?.message}`);
+      skipped++;
+      continue;
+    }
 
     const { data: existing } = await supabaseAdmin
       .from("matches")
@@ -67,7 +75,7 @@ export async function POST(req: NextRequest) {
     const awayScore = status === "finished" ? (m.score.fullTime.away ?? null) : null;
     const stage = mapApiStageToDb(m.stage);
 
-    await supabaseAdmin.from("matches").upsert({
+    const { error: upsertErr } = await supabaseAdmin.from("matches").upsert({
       external_id: m.id,
       team_a_id: teamA.id,
       team_b_id: teamB.id,
@@ -77,6 +85,12 @@ export async function POST(req: NextRequest) {
       team_a_score: homeScore,
       team_b_score: awayScore,
     }, { onConflict: "external_id" });
+
+    if (upsertErr) {
+      errors.push(`match ${m.id} stage=${stage} status=${status}: ${upsertErr.message}`);
+      skipped++;
+      continue;
+    }
 
     synced++;
 
@@ -95,7 +109,7 @@ export async function POST(req: NextRequest) {
 
   if (scored > 0) await redis.del(CACHE_KEYS.globalLeaderboard).catch(() => {});
 
-  return NextResponse.json({ synced, scored });
+  return NextResponse.json({ synced, scored, skipped, errors: errors.slice(0, 10) });
 }
 
 async function scoreMatch(

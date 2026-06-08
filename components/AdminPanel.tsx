@@ -46,7 +46,13 @@ export function AdminPanel({ matches, teams }: { matches: Match[]; teams: Team[]
     try {
       const res = await fetch("/api/admin/sync-matches", { method: "POST" });
       const data = await res.json();
-      res.ok ? toast.success(`Synced ${data.synced} matches`) : toast.error(data.error ?? "Sync failed");
+      if (res.ok) {
+        const msg = `Synced ${data.synced}, skipped ${data.skipped ?? 0}`;
+        const errs = data.errors?.length ? ` | Errors: ${data.errors[0]}` : "";
+        toast.success(msg + errs, { duration: 8000 });
+      } else {
+        toast.error(data.error ?? "Sync failed");
+      }
       router.refresh();
     } catch {
       toast.error("Network error — sync failed");
