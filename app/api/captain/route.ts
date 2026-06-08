@@ -17,8 +17,8 @@ export async function POST(req: NextRequest) {
   const dbUser = await getOrCreateDbUser();
   if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-  if (dbUser.captain_team_id && await isTournamentStarted()) {
-    return NextResponse.json({ error: "Tournament has started — captain can no longer be changed" }, { status: 400 });
+  if (await isTournamentStarted()) {
+    return NextResponse.json({ error: "Tournament has started — captain selection is locked" }, { status: 400 });
   }
 
   const { teamId } = await req.json();
