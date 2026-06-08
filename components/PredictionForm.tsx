@@ -29,10 +29,11 @@ const CHAOS_EVENTS = [
 ];
 const GOALS = [0, 1, 2, 3, "4+"] as const;
 
-function FlagImg({ isoCode, name, size = 36 }: { isoCode?: string | null; name: string; size?: number }) {
+function FlagImg({ isoCode, flagUrl, name, size = 36 }: { isoCode?: string | null; flagUrl?: string | null; name: string; size?: number }) {
   const [err, setErr] = useState(false);
-  if (!isoCode || err) return <div style={{ width: size * 1.4, height: size, borderRadius: 4, background: "var(--wc-surface-alt)" }} />;
-  return <img src={`https://flagcdn.com/w80/${isoCode}.png`} alt={name} onError={() => setErr(true)} style={{ width: size * 1.4, height: size, borderRadius: 4, objectFit: "cover", boxShadow: "0 1px 4px rgba(0,0,0,0.4)", display: "block" }} />;
+  const src = isoCode && !err ? `https://flagcdn.com/w80/${isoCode}.png` : (flagUrl ?? null);
+  if (!src) return <div style={{ width: size * 1.4, height: size, borderRadius: 4, background: "var(--wc-surface-alt)" }} />;
+  return <img src={src} alt={name} onError={() => setErr(true)} style={{ width: size * 1.4, height: size, borderRadius: 4, objectFit: "cover", boxShadow: "0 1px 4px rgba(0,0,0,0.4)", display: "block" }} />;
 }
 
 function deriveResult(a: string, b: string): Result | null {
@@ -158,7 +159,7 @@ export function PredictionForm({ match, existing, wildcardUsed = {}, underdogTea
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 12 }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 8 }}>
-            <FlagImg isoCode={match.teamA.isoCode} name={match.teamA.name} size={36} />
+            <FlagImg isoCode={match.teamA.isoCode} flagUrl={match.teamA.flagUrl} name={match.teamA.name} size={36} />
             <span style={{ fontSize: 15, fontWeight: 700, color: "var(--wc-text-1)" }}>{match.teamA.name}</span>
           </div>
           <div style={{ textAlign: "center" }}>
@@ -166,7 +167,7 @@ export function PredictionForm({ match, existing, wildcardUsed = {}, underdogTea
             {!editable && match.status === "scheduled" && <div style={{ fontSize: 11, color: "var(--wc-text-2)", marginTop: 6, fontWeight: 600 }}>Locked — predictions closed</div>}
           </div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
-            <FlagImg isoCode={match.teamB.isoCode} name={match.teamB.name} size={36} />
+            <FlagImg isoCode={match.teamB.isoCode} flagUrl={match.teamB.flagUrl} name={match.teamB.name} size={36} />
             <span style={{ fontSize: 15, fontWeight: 700, color: "var(--wc-text-1)" }}>{match.teamB.name}</span>
           </div>
         </div>

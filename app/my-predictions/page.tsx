@@ -39,7 +39,7 @@ export default async function MyPredictionsPage() {
   const teamIds = [...new Set((matches ?? []).flatMap(m => [m.team_a_id, m.team_b_id]))];
   const { data: teams } = await supabaseAdmin
     .from("teams")
-    .select("id, name, iso_code")
+    .select("id, name, iso_code, flag_url")
     .in("id", teamIds);
 
   const totalPts = predictions.reduce((s, p) => s + (p.points_earned ?? 0), 0);

@@ -5,16 +5,17 @@ import { useState } from "react";
 import { Lock, Crosshair, Zap, Dices } from "lucide-react";
 import type { MatchWithTeams } from "@/components/MatchList";
 
-function Flag({ iso, name, size = 40 }: { iso?: string | null; name: string; size?: number }) {
+function Flag({ iso, flagUrl, name, size = 40 }: { iso?: string | null; flagUrl?: string | null; name: string; size?: number }) {
   const [err, setErr] = useState(false);
-  if (!iso || err) {
+  const src = iso && !err ? `https://flagcdn.com/w${size <= 24 ? 40 : 80}/${iso}.png` : (flagUrl ?? null);
+  if (!src) {
     return (
       <div style={{ width: Math.round(size * 1.43), height: size, borderRadius: 4, background: "var(--wc-surface-alt)", border: "1px solid var(--wc-border)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--wc-text-3)", fontSize: size * 0.4, fontWeight: 700 }}>?</div>
     );
   }
   return (
     <img
-      src={`https://flagcdn.com/w${size <= 24 ? 40 : 80}/${iso}.png`}
+      src={src}
       alt={name}
       onError={() => setErr(true)}
       style={{ width: Math.round(size * 1.43), height: size, borderRadius: 4, objectFit: "cover", boxShadow: "0 1px 6px rgba(0,0,0,0.5)", display: "block", flexShrink: 0 }}
@@ -77,7 +78,7 @@ export function MatchCard({ match, myPick }: {
       <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 8, padding: "14px 20px" }}>
         {/* Home */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 7 }}>
-          <Flag iso={match.teamA.iso_code} name={match.teamA.name} size={40} />
+          <Flag iso={match.teamA.iso_code} flagUrl={match.teamA.flag_url} name={match.teamA.name} size={40} />
           <span style={{ fontSize: 14, fontWeight: 700, color: "var(--wc-text-1)", lineHeight: 1 }}>
             {match.teamA.short || (match.teamA.iso_code ? match.teamA.iso_code.toUpperCase() : match.teamA.name)}
           </span>
@@ -105,7 +106,7 @@ export function MatchCard({ match, myPick }: {
 
         {/* Away */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 7 }}>
-          <Flag iso={match.teamB.iso_code} name={match.teamB.name} size={40} />
+          <Flag iso={match.teamB.iso_code} flagUrl={match.teamB.flag_url} name={match.teamB.name} size={40} />
           <span style={{ fontSize: 14, fontWeight: 700, color: "var(--wc-text-1)", lineHeight: 1 }}>
             {match.teamB.short || (match.teamB.iso_code ? match.teamB.iso_code.toUpperCase() : match.teamB.name)}
           </span>

@@ -6,12 +6,13 @@ import { Trophy, Crosshair, Zap, Dices, CircleDot, Star, Pencil, ChevronDown } f
 
 interface Prediction { id: number; match_id: number; predicted_result: string; predicted_team_a_goals: number; predicted_team_b_goals: number; wildcard_type: string | null; points_earned: number | null }
 interface Match { id: number; kickoff_time: string; status: string; stage: string; team_a_id: number; team_b_id: number; team_a_score: number | null; team_b_score: number | null }
-interface Team { id: number; name: string; iso_code: string | null }
+interface Team { id: number; name: string; iso_code: string | null; flag_url?: string | null }
 
-function FlagImg({ isoCode, name, size = 18 }: { isoCode?: string | null; name: string; size?: number }) {
+function FlagImg({ isoCode, flagUrl, name, size = 18 }: { isoCode?: string | null; flagUrl?: string | null; name: string; size?: number }) {
   const [err, setErr] = useState(false);
-  if (!isoCode || err) return <div style={{ width: size * 1.4, height: size, borderRadius: 3, background: "var(--wc-surface-alt)" }} />;
-  return <img src={`https://flagcdn.com/w40/${isoCode}.png`} alt={name} onError={() => setErr(true)} style={{ width: size * 1.4, height: size, borderRadius: 3, objectFit: "cover", display: "inline-block", verticalAlign: "middle" }} />;
+  const src = isoCode && !err ? `https://flagcdn.com/w40/${isoCode}.png` : (flagUrl ?? null);
+  if (!src) return <div style={{ width: size * 1.4, height: size, borderRadius: 3, background: "var(--wc-surface-alt)" }} />;
+  return <img src={src} alt={name} onError={() => setErr(true)} style={{ width: size * 1.4, height: size, borderRadius: 3, objectFit: "cover", display: "inline-block", verticalAlign: "middle" }} />;
 }
 
 function isEditable(kickoffTime: string) {
@@ -93,11 +94,11 @@ function PredictionRow({ p, match, teamA, teamB, showBreakdown, onToggle }: { p:
       <div onClick={() => isFinished && onToggle()} style={{ padding: "14px 16px", cursor: isFinished ? "pointer" : "default", display: "flex", alignItems: "flex-start", gap: 12 }}>
         <div style={{ flex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-            <FlagImg isoCode={teamA.iso_code} name={teamA.name} size={18} />
+            <FlagImg isoCode={teamA.iso_code} flagUrl={teamA.flag_url} name={teamA.name} size={18} />
             <span style={{ fontSize: 14, fontWeight: 700, color: "var(--wc-text-1)" }}>{teamA.name}</span>
             <span style={{ fontSize: 12, color: "var(--wc-text-3)" }}>vs</span>
             <span style={{ fontSize: 14, fontWeight: 700, color: "var(--wc-text-1)" }}>{teamB.name}</span>
-            <FlagImg isoCode={teamB.iso_code} name={teamB.name} size={18} />
+            <FlagImg isoCode={teamB.iso_code} flagUrl={teamB.flag_url} name={teamB.name} size={18} />
           </div>
           <div style={{ fontSize: 12, color: "var(--wc-text-2)" }}>
             Your pick: <span style={{ fontWeight: 700, color: "var(--wc-text-1)" }}>{p.predicted_team_a_goals}–{p.predicted_team_b_goals}</span>

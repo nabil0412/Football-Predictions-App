@@ -6,10 +6,11 @@ import { toast } from "sonner";
 
 interface Team { id: number; name: string; flag_url: string | null; group: string | null; iso_code?: string | null }
 
-function FlagImg({ isoCode, name, size = 32 }: { isoCode?: string | null; name: string; size?: number }) {
+function FlagImg({ isoCode, flagUrl, name, size = 32 }: { isoCode?: string | null; flagUrl?: string | null; name: string; size?: number }) {
   const [err, setErr] = useState(false);
-  if (!isoCode || err) return <div style={{ width: size * 1.4, height: size, borderRadius: 4, background: "var(--wc-surface-alt)", border: "1px solid var(--wc-border)" }} />;
-  return <img src={`https://flagcdn.com/w80/${isoCode}.png`} alt={name} onError={() => setErr(true)} style={{ width: size * 1.4, height: size, borderRadius: 4, objectFit: "cover", boxShadow: "0 1px 4px rgba(0,0,0,0.4)" }} />;
+  const src = isoCode && !err ? `https://flagcdn.com/w80/${isoCode}.png` : (flagUrl ?? null);
+  if (!src) return <div style={{ width: size * 1.4, height: size, borderRadius: 4, background: "var(--wc-surface-alt)", border: "1px solid var(--wc-border)" }} />;
+  return <img src={src} alt={name} onError={() => setErr(true)} style={{ width: size * 1.4, height: size, borderRadius: 4, objectFit: "cover", boxShadow: "0 1px 4px rgba(0,0,0,0.4)" }} />;
 }
 
 export function CaptainPicker({ teams, currentCaptainId, locked }: { teams: Team[]; currentCaptainId: number | null; locked: boolean }) {
@@ -81,7 +82,7 @@ export function CaptainPicker({ teams, currentCaptainId, locked }: { teams: Team
                     {isSelected && !isMyCaptain && (
                       <span style={{ position: "absolute", top: 4, right: 4, width: 16, height: 16, borderRadius: "50%", background: "var(--wc-green)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, color: "#000", fontWeight: 900 }}>✓</span>
                     )}
-                    <FlagImg isoCode={team.iso_code} name={team.name} size={32} />
+                    <FlagImg isoCode={team.iso_code} flagUrl={team.flag_url} name={team.name} size={32} />
                     <span style={{ fontSize: 11, fontWeight: 600, color: isSelected ? "var(--wc-text-1)" : "var(--wc-text-2)", textAlign: "center", lineHeight: 1.2 }}>
                       {team.name.split(" ").slice(-1)[0]}
                     </span>
