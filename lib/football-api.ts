@@ -16,6 +16,7 @@ export interface ApiMatch {
   utcDate: string;
   status: string; // SCHEDULED, TIMED, IN_PLAY, PAUSED, FINISHED, SUSPENDED, POSTPONED, CANCELLED, AWARDED
   stage: string;
+  matchday: number | null;
   homeTeam: ApiTeam;
   awayTeam: ApiTeam;
   score: {

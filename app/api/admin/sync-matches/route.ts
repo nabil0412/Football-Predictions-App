@@ -84,6 +84,7 @@ export async function POST(req: NextRequest) {
       status,
       team_a_score: homeScore,
       team_b_score: awayScore,
+      matchday: m.matchday ?? null,
     }, { onConflict: "external_id" });
 
     if (upsertErr) {

@@ -13,18 +13,18 @@ export default async function HomePage() {
       .select("id, kickoff_time, status, stage, matchday, team_a_score, team_b_score, team_a_id, team_b_id")
       .gte("kickoff_time", now)
       .order("kickoff_time"),
-    supabaseAdmin.from("teams").select("id, name, flag_url, iso_code"),
+    supabaseAdmin.from("teams").select("id, name, flag_url"),
     getDbUser(),
   ]);
 
   type RawMatch = { id: number; kickoff_time: string; status: string; stage: string; matchday: number | null; team_a_score: number | null; team_b_score: number | null; team_a_id: number; team_b_id: number };
-  type RawTeam  = { id: number; name: string; flag_url: string | null; iso_code: string | null };
+  type RawTeam  = { id: number; name: string; flag_url: string | null };
 
   const teamMap = Object.fromEntries((allTeams as RawTeam[] ?? []).map(t => [t.id, t]));
   const enriched = (upcoming as RawMatch[] ?? []).map(m => ({
     ...m,
-    teamA: teamMap[m.team_a_id] ?? { id: m.team_a_id, name: `Team ${m.team_a_id}`, flag_url: null, iso_code: null },
-    teamB: teamMap[m.team_b_id] ?? { id: m.team_b_id, name: `Team ${m.team_b_id}`, flag_url: null, iso_code: null },
+    teamA: teamMap[m.team_a_id] ?? { id: m.team_a_id, name: `Team ${m.team_a_id}`, flag_url: null },
+    teamB: teamMap[m.team_b_id] ?? { id: m.team_b_id, name: `Team ${m.team_b_id}`, flag_url: null },
   }));
 
   // Fetch user's predictions to show on home page
