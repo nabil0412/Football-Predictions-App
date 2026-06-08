@@ -38,6 +38,8 @@ export function AdminPanel({ matches, teams }: { matches: Match[]; teams: Team[]
   const [calculating, setCalculating] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [fetchingOdds, setFetchingOdds] = useState(false);
+  const [seeding, setSeeding] = useState(false);
+  const seedEnabled = process.env.NEXT_PUBLIC_ENABLE_SEED === "true";
 
   const teamName = (id: number) => teams.find((t) => t.id === id)?.name ?? `Team ${id}`;
 
@@ -76,6 +78,22 @@ export function AdminPanel({ matches, teams }: { matches: Match[]; teams: Team[]
     const data = await res.json();
     res.ok ? toast.success("Score saved") : toast.error(data.error);
     router.refresh();
+  }
+
+  async function seedTestData() {
+    setSeeding(true);
+    try {
+      const res = await fetch("/api/admin/seed", { method: "POST" });
+      const data = await res.json();
+      res.ok
+        ? toast.success(`Seeded ${data.teams} teams, ${data.matches} matches`, { duration: 6000 })
+        : toast.error(data.error ?? "Seed failed");
+      router.refresh();
+    } catch {
+      toast.error("Network error — seed failed");
+    } finally {
+      setSeeding(false);
+    }
   }
 
   async function fetchOdds() {
@@ -213,6 +231,20 @@ export function AdminPanel({ matches, teams }: { matches: Match[]; teams: Team[]
             </Button>
           </CardContent>
         </Card>
+
+        {seedEnabled && (
+          <Card className="border-yellow-500/30">
+            <CardHeader><CardTitle className="text-base text-yellow-500">Seed test data</CardTitle></CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Wipes existing mock teams/matches and inserts 8 teams + 10 matches covering all stages and statuses. Only available when <code className="text-xs">ENABLE_SEED=true</code>.
+              </p>
+              <Button onClick={seedTestData} disabled={seeding} variant="outline" className="w-full border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10">
+                {seeding ? "Seeding…" : "Seed test data"}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </TabsContent>
     </Tabs>
   );
