@@ -43,14 +43,16 @@ export function AdminPanel({ matches, teams }: { matches: Match[]; teams: Team[]
 
   async function syncMatches() {
     setSyncing(true);
-    const res = await fetch("/api/admin/sync-matches", {
-      method: "POST",
-      headers: { "x-cron-secret": process.env.NEXT_PUBLIC_CRON_SECRET ?? "" },
-    });
-    const data = await res.json();
-    setSyncing(false);
-    res.ok ? toast.success(`Synced ${data.synced} matches`) : toast.error(data.error);
-    router.refresh();
+    try {
+      const res = await fetch("/api/admin/sync-matches", { method: "POST" });
+      const data = await res.json();
+      res.ok ? toast.success(`Synced ${data.synced} matches`) : toast.error(data.error ?? "Sync failed");
+      router.refresh();
+    } catch {
+      toast.error("Network error — sync failed");
+    } finally {
+      setSyncing(false);
+    }
   }
 
   async function enterScore() {
