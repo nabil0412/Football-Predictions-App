@@ -1,49 +1,70 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/db";
-import { fetchAllFixtures, fetchChaosEventsForFixture, mapRound, mapStatus } from "@/lib/events-api";
+import { fetchWorldCupMatches, fetchWorldCupTeams, mapApiStageToDb } from "@/lib/football-api";
+import { fetchChaosEventsForMatch } from "@/lib/events-api";
 import { calculateScore, CAPTAIN_STAGE_BONUS, type ChaosCardType } from "@/lib/scoring";
 import { redis, CACHE_KEYS } from "@/lib/redis";
+
+function mapStatus(apiStatus: string): "scheduled" | "live" | "finished" | null {
+  switch (apiStatus) {
+    case "SCHEDULED":
+    case "TIMED":
+      return "scheduled";
+    case "IN_PLAY":
+    case "PAUSED":
+      return "live";
+    case "FINISHED":
+    case "AWARDED":
+      return "finished";
+    default:
+      return null; // SUSPENDED, POSTPONED, CANCELLED — skip
+  }
+}
 
 export async function POST(req: NextRequest) {
   if (req.headers.get("x-cron-secret") !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const fixtures = await fetchAllFixtures();
+  const [matches, teams] = await Promise.all([
+    fetchWorldCupMatches(),
+    fetchWorldCupTeams(),
+  ]);
+
+  // Upsert all teams first
+  for (const team of teams) {
+    await supabaseAdmin.from("teams")
+      .upsert({ name: team.name, flag_url: team.crest, external_id: team.id }, { onConflict: "external_id" });
+  }
+
   let synced = 0;
   let scored = 0;
 
-  for (const f of fixtures) {
-    const status = mapStatus(f.fixture.status.short);
-    if (status === null) continue; // postponed/cancelled — skip
+  for (const m of matches) {
+    const status = mapStatus(m.status);
+    if (status === null) continue;
 
-    // Upsert teams
     const [{ data: teamA }, { data: teamB }] = await Promise.all([
-      supabaseAdmin.from("teams")
-        .upsert({ name: f.teams.home.name, flag_url: f.teams.home.logo, external_id: f.teams.home.id }, { onConflict: "external_id" })
-        .select("id").single(),
-      supabaseAdmin.from("teams")
-        .upsert({ name: f.teams.away.name, flag_url: f.teams.away.logo, external_id: f.teams.away.id }, { onConflict: "external_id" })
-        .select("id").single(),
+      supabaseAdmin.from("teams").select("id").eq("external_id", m.homeTeam.id).maybeSingle(),
+      supabaseAdmin.from("teams").select("id").eq("external_id", m.awayTeam.id).maybeSingle(),
     ]);
     if (!teamA || !teamB) continue;
 
-    // Check existing match status
     const { data: existing } = await supabaseAdmin
       .from("matches")
       .select("id, status")
-      .eq("external_id", f.fixture.id)
+      .eq("external_id", m.id)
       .maybeSingle();
 
-    const homeScore = status === "finished" ? (f.goals.home ?? null) : null;
-    const awayScore = status === "finished" ? (f.goals.away ?? null) : null;
-    const stage = mapRound(f.league.round);
+    const homeScore = status === "finished" ? (m.score.fullTime.home ?? null) : null;
+    const awayScore = status === "finished" ? (m.score.fullTime.away ?? null) : null;
+    const stage = mapApiStageToDb(m.stage);
 
     await supabaseAdmin.from("matches").upsert({
-      external_id: f.fixture.id,
+      external_id: m.id,
       team_a_id: teamA.id,
       team_b_id: teamB.id,
-      kickoff_time: f.fixture.date,
+      kickoff_time: m.utcDate,
       stage,
       status,
       team_a_score: homeScore,
@@ -52,10 +73,9 @@ export async function POST(req: NextRequest) {
 
     synced++;
 
-    // Auto-score when match first transitions to finished
     const justFinished = status === "finished" && existing?.status !== "finished";
     if (justFinished && existing?.id && homeScore != null && awayScore != null) {
-      const chaosEvents = await fetchChaosEventsForFixture(f);
+      const chaosEvents = await fetchChaosEventsForMatch(m.utcDate, m.homeTeam.name, m.awayTeam.name);
       if (chaosEvents.length > 0) {
         await supabaseAdmin
           .from("matches")

@@ -1,127 +1,86 @@
-const BASE = "https://v3.football.api-sports.io";
-const KEY = process.env.APIFOOTBALL_KEY!;
-const WC_LEAGUE = 1;
-const WC_SEASON = 2026;
+const BASE = "https://soccer.highlightly.net";
+const KEY = process.env.HIGHLIGHTLY_KEY!;
 
-export interface ApiFootballFixture {
-  fixture: { id: number; date: string; status: { short: string } };
-  league: { round: string };
-  teams: {
-    home: { id: number; name: string; logo: string };
-    away: { id: number; name: string; logo: string };
-  };
-  goals: { home: number | null; away: number | null };
+interface HighlightlyMatch {
+  id: string;
+  homeTeam: { id: string; name: string };
+  awayTeam: { id: string; name: string };
 }
 
-interface ApiEvent {
-  team: { id: number };
-  player: { id: number };
-  type: string;
-  detail: string;
+interface HighlightlyEvent {
+  type: string;   // "GOAL", "RED_CARD", "YELLOW_RED_CARD", "VAR_GOAL_CANCELLED", etc.
+  teamId: string;
+  playerId: string;
 }
 
-const FINISHED_STATUSES = new Set(["FT", "AET", "PEN"]);
-const LIVE_STATUSES = new Set(["1H", "HT", "2H", "ET", "BT", "P", "LIVE"]);
-
-export function mapRound(round: string): string {
-  if (round.startsWith("Group")) return "group";
-  if (round.includes("32")) return "round_of_32";
-  if (round.includes("16")) return "round_of_16";
-  if (round.includes("Quarter")) return "quarter_final";
-  if (round.includes("Semi")) return "semi_final";
-  if (round.includes("Final")) return "final";
-  return "group";
+function normalize(name: string) {
+  return name.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z]/g, "");
 }
 
-export function mapStatus(short: string): "scheduled" | "finished" | "live" | null {
-  if (FINISHED_STATUSES.has(short)) return "finished";
-  if (LIVE_STATUSES.has(short)) return "live";
-  if (["NS", "TBD"].includes(short)) return "scheduled";
-  return null; // postponed/cancelled — skip
+function teamMatch(a: string, b: string) {
+  const na = normalize(a);
+  const nb = normalize(b);
+  return na === nb
+    || na.startsWith(nb.slice(0, 5))
+    || nb.startsWith(na.slice(0, 5))
+    || na.includes(nb.slice(0, 6))
+    || nb.includes(na.slice(0, 6));
 }
 
-export async function fetchAllFixtures(): Promise<ApiFootballFixture[]> {
-  const res = await fetch(`${BASE}/fixtures?league=${WC_LEAGUE}&season=${WC_SEASON}`, {
-    headers: { "x-apisports-key": KEY },
+async function findMatchId(date: string, homeTeam: string, awayTeam: string): Promise<HighlightlyMatch | null> {
+  const res = await fetch(`${BASE}/matches?date=${date}&leagueId=1635`, {
+    headers: { "X-Api-Key": KEY },
     next: { revalidate: 0 },
   });
-  if (!res.ok) throw new Error(`API-Football fixtures error: ${res.status}`);
+  if (!res.ok) return null;
   const data = await res.json();
-  return data.response ?? [];
+  const matches: HighlightlyMatch[] = data.data ?? data ?? [];
+  return matches.find(m =>
+    teamMatch(m.homeTeam.name, homeTeam) && teamMatch(m.awayTeam.name, awayTeam)
+  ) ?? null;
 }
 
-export async function fetchChaosEvents(fixtureId: number): Promise<string[]> {
-  const res = await fetch(`${BASE}/fixtures/events?fixture=${fixtureId}`, {
-    headers: { "x-apisports-key": KEY },
+export async function fetchChaosEventsForMatch(
+  kickoffTime: string,
+  homeTeamName: string,
+  awayTeamName: string,
+): Promise<string[]> {
+  if (!KEY) return [];
+
+  const date = kickoffTime.slice(0, 10);
+  const match = await findMatchId(date, homeTeamName, awayTeamName);
+  if (!match) return [];
+
+  const res = await fetch(`${BASE}/matches/${match.id}/events`, {
+    headers: { "X-Api-Key": KEY },
     next: { revalidate: 0 },
   });
   if (!res.ok) return [];
   const data = await res.json();
-  const events: ApiEvent[] = data.response ?? [];
+  const events: HighlightlyEvent[] = data.data ?? data ?? [];
 
   const chaos: string[] = [];
 
   // common — red card or second yellow
-  if (events.some(e => e.type === "Card" && (e.detail === "Red Card" || e.detail === "Yellow Red Card")))
+  if (events.some(e => e.type === "RED_CARD" || e.type === "YELLOW_RED_CARD"))
     chaos.push("common");
 
   // medium — VAR cancelled goal
-  if (events.some(e => e.type === "Var" && e.detail.toLowerCase().includes("goal cancelled")))
+  if (events.some(e => e.type === "VAR_GOAL_CANCELLED"))
     chaos.push("medium");
 
-  // rare_a / rare_b — hat-trick by a single player
-  const goalCounts: Record<string, { team: number; count: number }> = {};
+  // rare_a / rare_b — hat-trick (same player 3+ goals for their team)
+  const goalCounts: Record<string, { teamId: string; count: number }> = {};
   for (const e of events) {
-    if (e.type === "Goal" && e.detail !== "Own Goal") {
-      const key = String(e.player.id);
-      if (!goalCounts[key]) goalCounts[key] = { team: e.team.id, count: 0 };
-      goalCounts[key].count++;
+    if (e.type === "GOAL") {
+      if (!goalCounts[e.playerId]) goalCounts[e.playerId] = { teamId: e.teamId, count: 0 };
+      goalCounts[e.playerId].count++;
     }
   }
-  // need home/away team IDs to distinguish rare_a vs rare_b — caller passes them separately
-  // we return raw player→team data as a temporary map for the caller to resolve
-  // (see scoreMatch in sync-matches)
-  for (const [, { count }] of Object.entries(goalCounts)) {
+  for (const { teamId, count } of Object.values(goalCounts)) {
     if (count >= 3) {
-      // we can't distinguish home/away here without fixture context — handled in sync-matches
-    }
-  }
-
-  return [...new Set(chaos)];
-}
-
-// Full version used in sync-matches (has fixture context)
-export async function fetchChaosEventsForFixture(fixture: ApiFootballFixture): Promise<string[]> {
-  const res = await fetch(`${BASE}/fixtures/events?fixture=${fixture.fixture.id}`, {
-    headers: { "x-apisports-key": KEY },
-    next: { revalidate: 0 },
-  });
-  if (!res.ok) return [];
-  const data = await res.json();
-  const events: ApiEvent[] = data.response ?? [];
-
-  const chaos: string[] = [];
-
-  if (events.some(e => e.type === "Card" && (e.detail === "Red Card" || e.detail === "Yellow Red Card")))
-    chaos.push("common");
-
-  if (events.some(e => e.type === "Var" && e.detail.toLowerCase().includes("goal cancelled")))
-    chaos.push("medium");
-
-  const homeId = fixture.teams.home.id;
-  const awayId = fixture.teams.away.id;
-  const goalCounts: Record<string, { team: number; count: number }> = {};
-  for (const e of events) {
-    if (e.type === "Goal" && e.detail !== "Own Goal") {
-      const key = String(e.player.id);
-      if (!goalCounts[key]) goalCounts[key] = { team: e.team.id, count: 0 };
-      goalCounts[key].count++;
-    }
-  }
-  for (const { team, count } of Object.values(goalCounts)) {
-    if (count >= 3) {
-      if (team === homeId) chaos.push("rare_a");
-      if (team === awayId) chaos.push("rare_b");
+      if (teamId === match.homeTeam.id) chaos.push("rare_a");
+      if (teamId === match.awayTeam.id) chaos.push("rare_b");
     }
   }
 
