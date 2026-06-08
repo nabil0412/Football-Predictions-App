@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/db";
 import { fetchWorldCupMatches, fetchWorldCupTeams, mapApiStageToDb } from "@/lib/football-api";
+import { fetchChaosEvents } from "@/lib/events-api";
 import { calculateScore, CAPTAIN_STAGE_BONUS, type ChaosCardType } from "@/lib/scoring";
 import { redis, CACHE_KEYS } from "@/lib/redis";
 
@@ -56,6 +57,14 @@ export async function POST(req: NextRequest) {
     // Auto-score predictions when a match first becomes finished
     const justFinished = isFinished && existing?.status !== "finished";
     if (justFinished && existing?.id && homeScore != null && awayScore != null) {
+      // Fetch and store chaos events from API-Football before scoring
+      const chaosEvents = await fetchChaosEvents(m.utcDate, m.homeTeam.name, m.awayTeam.name);
+      if (chaosEvents.length > 0) {
+        await supabaseAdmin
+          .from("matches")
+          .update({ chaos_events_occurred: chaosEvents } as never)
+          .eq("id", existing.id);
+      }
       scored += await scoreMatch(existing.id, homeScore, awayScore, mapApiStageToDb(m.stage), teamA.id, teamB.id);
     }
   }
