@@ -109,14 +109,14 @@ export function AdminPanel({ matches, teams }: { matches: Match[]; teams: Team[]
     setCalculating(true);
     const res = await fetch("/api/admin/calculate-scores", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-cron-secret": "" },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ matchId }),
     });
     const data = await res.json();
     setCalculating(false);
     res.ok
       ? toast.success(`Scored ${data.processed} predictions`)
-      : toast.error(data.error);
+      : toast.error(data.error ?? "Failed to score");
   }
 
   return (
