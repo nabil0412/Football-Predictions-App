@@ -34,12 +34,13 @@ export async function POST(req: NextRequest) {
   }
 
   // Wipe existing mock data (negative external_ids)
-  const { data: mockTeams } = await supabaseAdmin.from("teams").select("id").lt("external_id", 0);
-  const mockTeamIds = (mockTeams ?? []).map(t => t.id);
-  if (mockTeamIds.length > 0) {
-    await supabaseAdmin.from("matches").delete().in("team_a_id", mockTeamIds);
-    await supabaseAdmin.from("teams").delete().lt("external_id", 0);
+  const { data: mockMatches } = await supabaseAdmin.from("matches").select("id").lt("external_id", 0);
+  const mockMatchIds = (mockMatches ?? []).map(m => m.id);
+  if (mockMatchIds.length > 0) {
+    await supabaseAdmin.from("predictions").delete().in("match_id", mockMatchIds);
+    await supabaseAdmin.from("matches").delete().in("id", mockMatchIds);
   }
+  await supabaseAdmin.from("teams").delete().lt("external_id", 0);
 
   // Insert teams
   const { data: insertedTeams, error: teamErr } = await supabaseAdmin
