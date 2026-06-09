@@ -34,6 +34,12 @@ function WildcardIcon({ type }: { type: string }) {
   return null;
 }
 
+const WILDCARD_LABELS: Record<string, string> = {
+  confidence_pick: "Confidence pick bonus",
+  underdog_pick: "Underdog pick bonus",
+  chaos_card: "Chaos card bonus",
+};
+
 function ScoreBreakdown({ prediction, match, teamA, teamB }: { prediction: Prediction; match: Match; teamA: Team; teamB: Team }) {
   const correctResult = (
     (match.team_a_score! > match.team_b_score! && prediction.predicted_result === "team_a_win") ||
@@ -43,6 +49,11 @@ function ScoreBreakdown({ prediction, match, teamA, teamB }: { prediction: Predi
   const correctA = prediction.predicted_team_a_goals === Math.min(match.team_a_score!, 4);
   const correctB = prediction.predicted_team_b_goals === Math.min(match.team_b_score!, 4);
   const perfect = correctResult && correctA && correctB;
+
+  const basePoints = (correctResult ? 3 : 0) + (correctA ? 1 : 0) + (correctB ? 1 : 0) + (perfect ? 1 : 0);
+  const wildcardEffect = prediction.wildcard_type && prediction.points_earned !== null
+    ? prediction.points_earned - basePoints
+    : null;
 
   const rows = [
     { label: "Correct result", pts: 3, correct: correctResult },
@@ -71,6 +82,19 @@ function ScoreBreakdown({ prediction, match, teamA, teamB }: { prediction: Predi
             </span>
           </div>
         ))}
+        {prediction.wildcard_type && wildcardEffect !== null && (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 2, paddingTop: 6, borderTop: "1px dashed var(--wc-border)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ display: "flex", color: wildcardEffect >= 0 ? "var(--wc-gold, #f5a623)" : "var(--wc-red)" }}>
+                <WildcardIcon type={prediction.wildcard_type} />
+              </span>
+              <span style={{ fontSize: 13, color: "var(--wc-text-2)" }}>{WILDCARD_LABELS[prediction.wildcard_type] ?? "Wildcard bonus"}</span>
+            </div>
+            <span style={{ fontSize: 13, fontWeight: 700, fontVariantNumeric: "tabular-nums", color: wildcardEffect >= 0 ? "var(--wc-gold, #f5a623)" : "var(--wc-red)" }}>
+              {wildcardEffect > 0 ? `+${wildcardEffect}` : wildcardEffect}
+            </span>
+          </div>
+        )}
       </div>
       <div style={{ height: 1, background: "var(--wc-border)", margin: "10px 0" }} />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -88,6 +112,14 @@ function PredictionRow({ p, match, teamA, teamB, showBreakdown, onToggle }: { p:
   const isLive = match.status === "live";
   const canEdit = match.status === "scheduled" && isEditable(match.kickoff_time);
   const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+
+  const isPerfect = isFinished && match.team_a_score !== null && match.team_b_score !== null && (
+    ((match.team_a_score > match.team_b_score && p.predicted_result === "team_a_win") ||
+     (match.team_b_score > match.team_a_score && p.predicted_result === "team_b_win") ||
+     (match.team_a_score === match.team_b_score && p.predicted_result === "draw")) &&
+    p.predicted_team_a_goals === Math.min(match.team_a_score, 4) &&
+    p.predicted_team_b_goals === Math.min(match.team_b_score, 4)
+  );
 
   return (
     <div style={{ background: "var(--wc-surface)", border: "1px solid var(--wc-border)", borderRadius: 16, overflow: "hidden" }}>
@@ -117,7 +149,7 @@ function PredictionRow({ p, match, teamA, teamB, showBreakdown, onToggle }: { p:
               <span style={{ fontSize: 10, fontWeight: 600, color: "var(--wc-text-3)", marginLeft: 2 }}>pts</span>
             </span>
           )}
-          {isFinished && p.points_earned === 8 && <span title="Perfect"><Star size={14} color="var(--wc-green)" fill="var(--wc-green)" /></span>}
+          {isPerfect && <span title="Perfect prediction"><Star size={14} color="var(--wc-gold, #f5a623)" fill="var(--wc-gold, #f5a623)" /></span>}
           {canEdit && (
             <Link href={`/predictions/${match.id}`} style={{ display: "flex", alignItems: "center", gap: 4, background: "var(--wc-surface-alt)", border: "1px solid var(--wc-border)", borderRadius: 8, padding: "5px 10px", fontSize: 11, fontWeight: 700, color: "var(--wc-text-2)", textDecoration: "none" }}>
               <Pencil size={11} /> Edit
