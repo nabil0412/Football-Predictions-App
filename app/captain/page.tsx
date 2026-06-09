@@ -4,37 +4,50 @@ import { CaptainPicker } from "@/components/CaptainPicker";
 
 export const dynamic = "force-dynamic";
 
-async function getCaptainLockInfo() {
-  const { data } = await supabaseAdmin
-    .from("matches")
-    .select("kickoff_time")
-    .order("kickoff_time", { ascending: true })
-    .limit(1)
-    .single();
+async function getScheduleState() {
+  const [{ data: firstMatch }, { count: unfinished }, { count: total }] = await Promise.all([
+    supabaseAdmin.from("matches").select("kickoff_time").eq("stage", "group").order("kickoff_time", { ascending: true }).limit(1).single(),
+    supabaseAdmin.from("matches").select("*", { count: "exact", head: true }).eq("stage", "group").neq("status", "finished"),
+    supabaseAdmin.from("matches").select("*", { count: "exact", head: true }).eq("stage", "group"),
+  ]);
 
-  if (!data) return { locked: false, lockTime: null };
-  const lockTime = new Date(data.kickoff_time).getTime() - 60 * 60 * 1000;
-  return {
-    locked: Date.now() >= lockTime,
-    lockTime: new Date(lockTime),
-  };
+  const tournamentStarted = firstMatch ? Date.now() >= new Date(firstMatch.kickoff_time).getTime() : false;
+  const groupStageEnded = (total ?? 0) > 0 && (unfinished ?? 0) === 0;
+  const firstKickoff = firstMatch ? new Date(firstMatch.kickoff_time) : null;
+
+  return { tournamentStarted, groupStageEnded, firstKickoff };
 }
 
 export default async function CaptainPage() {
-  const [dbUser, { data: allTeams }, { locked, lockTime }] = await Promise.all([
+  const [dbUser, { data: allTeams }, { tournamentStarted, groupStageEnded, firstKickoff }] = await Promise.all([
     getOrCreateDbUser(),
     supabaseAdmin.from("teams").select("id, name, flag_url, iso_code, group").order("group").order("name"),
-    getCaptainLockInfo(),
+    getScheduleState(),
   ]);
 
-  const deadline = lockTime?.toLocaleString("en-GB", {
+  const hasCaptain = !!(dbUser?.captain_team_id);
+  // Locked = can't make any change:
+  // - Group stage ended (everyone locked)
+  // - Tournament started AND already have a captain (can't change)
+  const locked = groupStageEnded || (tournamentStarted && hasCaptain);
+
+  const deadline = firstKickoff?.toLocaleString("en-GB", {
     weekday: "short", day: "numeric", month: "short",
     hour: "2-digit", minute: "2-digit",
   });
 
+  const statusMessage = groupStageEnded
+    ? "Captain selection is closed — group stage has ended"
+    : tournamentStarted && hasCaptain
+      ? "Tournament started — your captain is locked in"
+      : tournamentStarted
+        ? "Tournament is underway — pick your captain now (you won't be able to change it)"
+        : deadline
+          ? `Locks when the tournament starts · ${deadline}`
+          : "Locks when the tournament starts";
+
   return (
     <div style={{ maxWidth: 720, margin: "0 auto", padding: "0 16px" }}>
-      {/* Header */}
       <div style={{ marginBottom: 24, paddingTop: 24 }}>
         <h1 style={{ fontSize: 26, fontWeight: 900, color: "var(--wc-text-1)", letterSpacing: "-0.02em", margin: 0 }}>
           Captain Pick
@@ -44,7 +57,6 @@ export default async function CaptainPage() {
         </p>
       </div>
 
-      {/* Scoring banner */}
       <div style={{
         background: "var(--wc-surface-alt)", border: "1px solid var(--wc-border)",
         borderRadius: 12, padding: "12px 16px", marginBottom: 24,
@@ -57,12 +69,8 @@ export default async function CaptainPage() {
             <span style={{ fontSize: 11, color: "var(--wc-border)" }}>·</span>
           </span>
         ))}
-        <div style={{ width: "100%", fontSize: 11, color: "var(--wc-text-3)", marginTop: 4 }}>
-          {locked
-            ? "Captain picks are locked — tournament has started"
-            : deadline
-            ? `Locks at ${deadline} — 1 hour before kick-off`
-            : "Locks 1 hour before the first match"}
+        <div style={{ width: "100%", fontSize: 11, color: tournamentStarted ? "var(--wc-text-2)" : "var(--wc-text-3)", marginTop: 4, fontWeight: tournamentStarted ? 600 : 400 }}>
+          {statusMessage}
         </div>
       </div>
 
@@ -70,6 +78,7 @@ export default async function CaptainPage() {
         teams={allTeams ?? []}
         currentCaptainId={dbUser?.captain_team_id ?? null}
         locked={locked}
+        tournamentStarted={tournamentStarted}
       />
     </div>
   );

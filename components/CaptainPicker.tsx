@@ -13,7 +13,7 @@ function FlagImg({ isoCode, flagUrl, name, size = 32 }: { isoCode?: string | nul
   return <img src={src} alt={name} onError={() => setErr(true)} style={{ width: size * 1.4, height: size, borderRadius: 4, objectFit: "cover", boxShadow: "0 1px 4px rgba(0,0,0,0.4)" }} />;
 }
 
-export function CaptainPicker({ teams, currentCaptainId, locked }: { teams: Team[]; currentCaptainId: number | null; locked: boolean }) {
+export function CaptainPicker({ teams, currentCaptainId, locked, tournamentStarted = false }: { teams: Team[]; currentCaptainId: number | null; locked: boolean; tournamentStarted?: boolean }) {
   const router = useRouter();
   const [selected, setSelected] = useState<number | null>(currentCaptainId);
   const [confirmed, setConfirmed] = useState(!!currentCaptainId && locked);
@@ -30,8 +30,8 @@ export function CaptainPicker({ teams, currentCaptainId, locked }: { teams: Team
     const data = await res.json();
     setSaving(false);
     if (!res.ok) { toast.error(data.error); return; }
-    if (locked) setConfirmed(true);
-    toast.success(locked ? `${data.team.name} locked in as your captain!` : `${data.team.name} set as your captain — you can change it until the tournament starts`);
+    if (tournamentStarted) setConfirmed(true);
+    toast.success(tournamentStarted ? `${data.team.name} locked in as your captain!` : `${data.team.name} set as your captain — you can change it until the tournament starts`);
     router.refresh();
   }
 
@@ -103,7 +103,7 @@ export function CaptainPicker({ teams, currentCaptainId, locked }: { teams: Team
           color: confirmed ? "var(--wc-green)" : noChange || !selected || locked ? "var(--wc-text-3)" : "#000",
           fontSize: 15, fontWeight: 800, transition: "all 0.2s",
         }}>
-          {locked && !confirmed ? "Tournament started — captain locked" : saving ? "Saving…" : confirmLabel}
+          {locked && !confirmed ? "Captain selection is closed" : saving ? "Saving…" : confirmLabel}
         </button>
       </div>
     </div>
