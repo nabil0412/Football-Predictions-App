@@ -33,19 +33,20 @@ export async function POST(req: NextRequest) {
     if (!isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Wipe existing mock data (negative external_ids)
+  // Wipe existing mock data — delete in FK order
   const { data: mockMatches } = await supabaseAdmin.from("matches").select("id").lt("external_id", 0);
   const mockMatchIds = (mockMatches ?? []).map(m => m.id);
   if (mockMatchIds.length > 0) {
+    await supabaseAdmin.from("wildcard_usage").delete().in("match_id", mockMatchIds);
     await supabaseAdmin.from("predictions").delete().in("match_id", mockMatchIds);
     await supabaseAdmin.from("matches").delete().in("id", mockMatchIds);
   }
   await supabaseAdmin.from("teams").delete().lt("external_id", 0);
 
-  // Insert teams
+  // Upsert teams (handles case where delete was blocked by an unexpected FK)
   const { data: insertedTeams, error: teamErr } = await supabaseAdmin
     .from("teams")
-    .insert(MOCK_TEAMS)
+    .upsert(MOCK_TEAMS, { onConflict: "external_id" })
     .select("id, external_id, name");
   if (teamErr) return NextResponse.json({ error: teamErr.message }, { status: 500 });
 
