@@ -110,6 +110,7 @@ function ScoreBreakdown({ prediction, match, teamA, teamB }: { prediction: Predi
 
 function PredictionRow({ p, match, teamA, teamB, showBreakdown, onToggle }: { p: Prediction; match: Match; teamA: Team; teamB: Team; showBreakdown: boolean; onToggle: () => void }) {
   const isFinished = match.status === "finished";
+  const hasScores = match.team_a_score !== null && match.team_b_score !== null;
   const isLive = match.status === "live";
   const canEdit = match.status === "scheduled" && isEditable(match.kickoff_time);
   const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
@@ -124,7 +125,7 @@ function PredictionRow({ p, match, teamA, teamB, showBreakdown, onToggle }: { p:
 
   return (
     <div style={{ background: "var(--wc-surface)", border: "1px solid var(--wc-border)", borderRadius: 16, overflow: "hidden" }}>
-      <div onClick={() => isFinished && onToggle()} style={{ padding: "14px 16px", cursor: isFinished ? "pointer" : "default", display: "flex", alignItems: "flex-start", gap: 12 }}>
+      <div onClick={() => isFinished && hasScores && onToggle()} style={{ padding: "14px 16px", cursor: isFinished && hasScores ? "pointer" : "default", display: "flex", alignItems: "flex-start", gap: 12 }}>
         <div style={{ flex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
             <FlagImg isoCode={teamA.iso_code} flagUrl={teamA.flag_url} name={teamA.name} size={18} />
@@ -156,10 +157,10 @@ function PredictionRow({ p, match, teamA, teamB, showBreakdown, onToggle }: { p:
               <Pencil size={11} /> Edit
             </Link>
           )}
-          {isFinished && <ChevronDown size={16} color="var(--wc-text-3)" style={{ transform: showBreakdown ? "rotate(180deg)" : "none", transition: "transform 0.2s", display: "block" }} />}
+          {isFinished && hasScores && <ChevronDown size={16} color="var(--wc-text-3)" style={{ transform: showBreakdown ? "rotate(180deg)" : "none", transition: "transform 0.2s", display: "block" }} />}
         </div>
       </div>
-      {isFinished && showBreakdown && <ScoreBreakdown prediction={p} match={match} teamA={teamA} teamB={teamB} />}
+      {isFinished && hasScores && showBreakdown && <ScoreBreakdown prediction={p} match={match} teamA={teamA} teamB={teamB} />}
     </div>
   );
 }
