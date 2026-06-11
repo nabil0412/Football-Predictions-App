@@ -45,12 +45,17 @@ function deriveResult(a: string, b: string): Result | null {
   return "draw";
 }
 
+function toUTC(s: Date | string): Date {
+  if (s instanceof Date) return s;
+  return new Date(s.includes('+') || s.endsWith('Z') ? s : s + 'Z');
+}
+
 function isEditable(kickoffTime: Date | string) {
-  return new Date(kickoffTime).getTime() - Date.now() > 60 * 60 * 1000;
+  return toUTC(kickoffTime).getTime() - Date.now() > 60 * 60 * 1000;
 }
 
 function fmtDate(dt: Date | string) {
-  return new Date(dt).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+  return toUTC(dt).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 }
 
 export function PredictionForm({ match, existing, wildcardUsed = {}, underdogTeamId = null }: { match: MatchData; existing?: ExistingPrediction | null; wildcardUsed?: Record<string, number>; underdogTeamId?: number | null }) {

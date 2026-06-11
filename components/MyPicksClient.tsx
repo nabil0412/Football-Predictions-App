@@ -16,7 +16,8 @@ function FlagImg({ isoCode, flagUrl, name, size = 18 }: { isoCode?: string | nul
 }
 
 function isEditable(kickoffTime: string) {
-  return new Date(kickoffTime).getTime() - Date.now() > 60 * 60 * 1000;
+  const t = kickoffTime.includes('+') || kickoffTime.endsWith('Z') ? kickoffTime : kickoffTime + 'Z';
+  return new Date(t).getTime() - Date.now() > 60 * 60 * 1000;
 }
 
 function resultLabel(r: string, a: string, b: string) {

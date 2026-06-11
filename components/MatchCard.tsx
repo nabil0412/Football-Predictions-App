@@ -52,9 +52,9 @@ export function MatchCard({ match, myPick }: {
   const isUpcoming = status === "scheduled";
   const isClickable = isUpcoming || isLocked;
 
-  const date = match.kickoff_time.slice(0, 10);
-  const time = new Date(match.kickoff_time).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-  const dateLabel = new Date(date + "T12:00:00")
+  const utcKickoff = match.kickoff_time.includes('+') || match.kickoff_time.endsWith('Z') ? match.kickoff_time : match.kickoff_time + 'Z';
+  const time = new Date(utcKickoff).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  const dateLabel = new Date(utcKickoff)
     .toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })
     .toUpperCase();
 

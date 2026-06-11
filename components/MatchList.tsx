@@ -50,7 +50,12 @@ export function MatchList({ matches, predictions = {} }: { matches: MatchWithTea
   const toggle = (k: string) => setCollapsed(p=>({...p,[k]:!p[k]}));
 
   const today = new Date().toISOString().slice(0,10);
-  const liveOrToday = matches.filter(m => m.status==="live" || m.status==="locked" || (m.status==="scheduled" && m.kickoff_time.slice(0,10)===today));
+  const liveOrToday = matches.filter(m => {
+    if (m.status === "live" || m.status === "locked") return true;
+    if (m.status !== "scheduled") return false;
+    const utc = m.kickoff_time.includes('+') || m.kickoff_time.endsWith('Z') ? m.kickoff_time : m.kickoff_time + 'Z';
+    return new Date(utc).toISOString().slice(0,10) === today;
+  });
   const hasLive = matches.some(m=>m.status==="live");
   const activeIdx = sections.findIndex(s=>s.isActive);
 
