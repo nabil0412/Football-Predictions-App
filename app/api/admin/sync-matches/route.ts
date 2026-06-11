@@ -33,10 +33,16 @@ export async function POST(req: NextRequest) {
   }
 
   // 1. Fetch from external APIs in parallel
-  const [apiMatches, apiTeams] = await Promise.all([
-    fetchWorldCupMatches(),
-    fetchWorldCupTeams(),
-  ]);
+  let apiMatches: Awaited<ReturnType<typeof fetchWorldCupMatches>>;
+  let apiTeams: Awaited<ReturnType<typeof fetchWorldCupTeams>>;
+  try {
+    [apiMatches, apiTeams] = await Promise.all([
+      fetchWorldCupMatches(),
+      fetchWorldCupTeams(),
+    ]);
+  } catch (e) {
+    return NextResponse.json({ error: `football-data.org fetch failed: ${(e as Error).message}` }, { status: 502 });
+  }
 
   // 2. Batch upsert all teams in one call
   const { error: teamErr } = await supabaseAdmin.from("teams").upsert(
@@ -98,19 +104,24 @@ export async function POST(req: NextRequest) {
 
   const synced = matchRows.length;
 
-  // 6. Score newly-finished matches (sequential — rare, max 1-2 per run)
+  // 6. Score newly-finished matches — best-effort, don't fail the sync
   let scored = 0;
+  const scoringErrors: string[] = [];
   for (const f of justFinished) {
-    const chaosEvents = await fetchChaosEventsForMatch(f.utcDate, f.homeTeam, f.awayTeam);
-    if (chaosEvents.length > 0) {
-      await supabaseAdmin.from("matches").update({ chaos_events_occurred: chaosEvents } as never).eq("id", f.dbId);
+    try {
+      const chaosEvents = await fetchChaosEventsForMatch(f.utcDate, f.homeTeam, f.awayTeam);
+      if (chaosEvents.length > 0) {
+        await supabaseAdmin.from("matches").update({ chaos_events_occurred: chaosEvents } as never).eq("id", f.dbId);
+      }
+      scored += await scoreMatch(f.dbId, f.homeScore, f.awayScore, f.stage, f.teamAId, f.teamBId, chaosEvents);
+    } catch (e) {
+      scoringErrors.push(`match ${f.dbId}: ${(e as Error).message}`);
     }
-    scored += await scoreMatch(f.dbId, f.homeScore, f.awayScore, f.stage, f.teamAId, f.teamBId, chaosEvents);
   }
 
   if (scored > 0) await redis.del(CACHE_KEYS.globalLeaderboard).catch(() => {});
 
-  return NextResponse.json({ synced, scored, skipped });
+  return NextResponse.json({ synced, scored, skipped, ...(scoringErrors.length ? { scoringErrors } : {}) });
 }
 
 async function scoreMatch(
