@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
 
   const [{ data: dbTeams }, { data: dbMatches }] = await Promise.all([
     supabaseAdmin.from("teams").select("id, external_id").in("external_id", externalTeamIds),
-    supabaseAdmin.from("matches").select("id, external_id, status").in("external_id", externalMatchIds),
+    supabaseAdmin.from("matches").select("id, external_id, status, team_a_score").in("external_id", externalMatchIds),
   ]);
 
   const teamByExtId = Object.fromEntries((dbTeams ?? []).map(t => [t.external_id, t.id]));
@@ -93,7 +93,9 @@ export async function POST(req: NextRequest) {
     });
 
     const existing = existingByExtId[m.id];
-    if (status === "finished" && existing?.status !== "finished" && existing?.id && homeScore != null && awayScore != null) {
+    const justBecameFinished = status === "finished" && existing?.status !== "finished";
+    const finishedButMissingScore = status === "finished" && existing?.status === "finished" && existing?.team_a_score == null;
+    if ((justBecameFinished || finishedButMissingScore) && existing?.id && homeScore != null && awayScore != null) {
       justFinished.push({ extId: m.id, dbId: existing.id, homeScore, awayScore, stage, teamAId, teamBId, utcDate: m.utcDate, homeTeam: m.homeTeam.name, awayTeam: m.awayTeam.name });
     }
   }
