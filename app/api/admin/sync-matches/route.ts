@@ -66,15 +66,22 @@ export async function POST(req: NextRequest) {
   // 4. Build match upsert payload
   const matchRows: object[] = [];
   const justFinished: Array<{ extId: number; dbId: number; homeScore: number; awayScore: number; stage: string; teamAId: number; teamBId: number; utcDate: string; homeTeam: string; awayTeam: string }> = [];
+  const skippedDetails: Array<{ id: number; home: string; away: string; reason: string; apiStatus: string }> = [];
   let skipped = 0;
 
   for (const m of apiMatches) {
     const status = mapStatus(m.status);
-    if (status === null) { skipped++; continue; }
+    if (status === null) {
+      skippedDetails.push({ id: m.id, home: m.homeTeam.name, away: m.awayTeam.name, reason: "unmapped_status", apiStatus: m.status });
+      skipped++; continue;
+    }
 
     const teamAId = teamByExtId[m.homeTeam.id];
     const teamBId = teamByExtId[m.awayTeam.id];
-    if (!teamAId || !teamBId) { skipped++; continue; }
+    if (!teamAId || !teamBId) {
+      skippedDetails.push({ id: m.id, home: m.homeTeam.name, away: m.awayTeam.name, reason: "team_not_found", apiStatus: m.status });
+      skipped++; continue;
+    }
 
     const homeScore = status === "finished" ? (m.score.fullTime.home ?? null) : null;
     const awayScore = status === "finished" ? (m.score.fullTime.away ?? null) : null;
@@ -123,7 +130,7 @@ export async function POST(req: NextRequest) {
 
   if (scored > 0) await redis.del(CACHE_KEYS.globalLeaderboard).catch(() => {});
 
-  return NextResponse.json({ synced, scored, skipped, ...(scoringErrors.length ? { scoringErrors } : {}) });
+  return NextResponse.json({ synced, scored, skipped, skippedDetails, ...(scoringErrors.length ? { scoringErrors } : {}) });
 }
 
 async function scoreMatch(
