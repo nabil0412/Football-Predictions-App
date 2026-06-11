@@ -170,8 +170,19 @@ export function AdminPanel({ matches, teams }: { matches: Match[]; teams: Team[]
           <CardHeader><CardTitle className="text-base">Enter match result</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label className="mb-1 block">Match ID</Label>
-              <Input value={scoreMatchId} onChange={(e) => setScoreMatchId(e.target.value)} placeholder="Match ID" type="number" />
+              <Label className="mb-1 block">Match</Label>
+              <select
+                value={scoreMatchId}
+                onChange={(e) => setScoreMatchId(e.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="">Select a match…</option>
+                {matches.map(m => (
+                  <option key={m.id} value={m.id}>
+                    {teamName(m.team_a_id)} vs {teamName(m.team_b_id)} — {m.stage.replace(/_/g, " ")} [{m.status}]
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
