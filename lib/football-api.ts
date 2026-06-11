@@ -24,21 +24,23 @@ export interface ApiMatch {
   };
 }
 
+const TIMEOUT_MS = 7000;
+
 export async function fetchWorldCupMatches(): Promise<ApiMatch[]> {
-  const res = await fetch(`${BASE_URL}/competitions/WC/matches`, { headers });
+  const res = await fetch(`${BASE_URL}/competitions/WC/matches`, { headers, signal: AbortSignal.timeout(TIMEOUT_MS) });
   if (!res.ok) throw new Error(`football-data.org error: ${res.status}`);
   const data = await res.json();
   return data.matches as ApiMatch[];
 }
 
 export async function fetchMatch(matchId: number): Promise<ApiMatch> {
-  const res = await fetch(`${BASE_URL}/matches/${matchId}`, { headers });
+  const res = await fetch(`${BASE_URL}/matches/${matchId}`, { headers, signal: AbortSignal.timeout(TIMEOUT_MS) });
   if (!res.ok) throw new Error(`football-data.org error: ${res.status}`);
   return res.json() as Promise<ApiMatch>;
 }
 
 export async function fetchWorldCupTeams(): Promise<ApiTeam[]> {
-  const res = await fetch(`${BASE_URL}/competitions/WC/teams`, { headers });
+  const res = await fetch(`${BASE_URL}/competitions/WC/teams`, { headers, signal: AbortSignal.timeout(TIMEOUT_MS) });
   if (!res.ok) throw new Error(`football-data.org error: ${res.status}`);
   const data = await res.json();
   return data.teams as ApiTeam[];

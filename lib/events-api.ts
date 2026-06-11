@@ -32,6 +32,7 @@ async function findMatchId(date: string, homeTeam: string, awayTeam: string): Pr
   const res = await fetch(`${BASE}/matches?date=${date}&leagueId=1635`, {
     headers: { "x-rapidapi-key": KEY, "x-rapidapi-host": RAPIDAPI_HOST },
     next: { revalidate: 0 },
+    signal: AbortSignal.timeout(4000),
   });
   if (!res.ok) return null;
   const data = await res.json();
@@ -55,6 +56,7 @@ export async function fetchChaosEventsForMatch(
   const res = await fetch(`${BASE}/matches/${match.id}/events`, {
     headers: { "x-rapidapi-key": KEY, "x-rapidapi-host": RAPIDAPI_HOST },
     next: { revalidate: 0 },
+    signal: AbortSignal.timeout(4000),
   });
   if (!res.ok) return [];
   const data = await res.json();
