@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
 
   const [{ data: dbTeams }, { data: dbMatches }] = await Promise.all([
     supabaseAdmin.from("teams").select("id, external_id").in("external_id", externalTeamIds),
-    supabaseAdmin.from("matches").select("id, external_id, status, team_a_score").in("external_id", externalMatchIds),
+    supabaseAdmin.from("matches").select("id, external_id, status, team_a_score, team_b_score").in("external_id", externalMatchIds),
   ]);
 
   const teamByExtId = Object.fromEntries((dbTeams ?? []).map(t => [t.external_id, t.id]));
@@ -87,19 +87,22 @@ export async function POST(req: NextRequest) {
     const awayScore = status === "finished" ? (m.score.fullTime.away ?? null) : null;
     const stage = mapApiStageToDb(m.stage);
 
+    const existing = existingByExtId[m.id];
+    // Never downgrade a finished match — API sometimes briefly mis-reports status
+    const finalStatus = existing?.status === "finished" ? "finished" : status;
+
     matchRows.push({
       external_id: m.id,
       team_a_id: teamAId,
       team_b_id: teamBId,
       kickoff_time: m.utcDate,
       stage,
-      status,
-      team_a_score: homeScore,
-      team_b_score: awayScore,
+      status: finalStatus,
+      team_a_score: finalStatus === "finished" ? (homeScore ?? existing?.team_a_score ?? null) : homeScore,
+      team_b_score: finalStatus === "finished" ? (awayScore ?? existing?.team_b_score ?? null) : awayScore,
       matchday: m.matchday ?? null,
     });
 
-    const existing = existingByExtId[m.id];
     const justBecameFinished = status === "finished" && existing?.status !== "finished";
     const finishedButMissingScore = status === "finished" && existing?.status === "finished" && existing?.team_a_score == null;
     if ((justBecameFinished || finishedButMissingScore) && existing?.id && homeScore != null && awayScore != null) {
