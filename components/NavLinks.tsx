@@ -28,6 +28,7 @@ export function NavLinks({ userId }: { userId: string | null }) {
 
   const links = [
     { href: "/",                label: "Matches" },
+    { href: "/results",         label: "Results" },
     { href: "/leaderboard",     label: "Leaderboard" },
     { href: "/leagues",         label: "Leagues" },
     ...(userId ? [{ href: "/my-predictions", label: "My Picks" }] : []),
