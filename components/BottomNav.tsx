@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Trophy, Users, CheckSquare, Star } from "lucide-react";
+import { Home, Trophy, Users, CheckSquare, Star, BarChart2 } from "lucide-react";
 
 export function BottomNav({ userId }: { userId: string | null }) {
   const pathname = usePathname();
 
   const items = [
     { href: "/",            Icon: Home,        label: "Matches" },
+    { href: "/results",     Icon: BarChart2,   label: "Results" },
     { href: "/leaderboard", Icon: Trophy,       label: "Ranks" },
     { href: "/leagues",     Icon: Users,        label: "Leagues" },
     ...(userId ? [
