@@ -48,6 +48,7 @@ export function ResultsMatchCard({ match, currentUserId }: { match: Match; curre
   const [open, setOpen] = useState(false);
   const [predictions, setPredictions] = useState<Prediction[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const isFinished = match.status === "finished";
   const isLive = match.status === "live";
@@ -63,8 +64,14 @@ export function ResultsMatchCard({ match, currentUserId }: { match: Match; curre
     setOpen(o => !o);
     if (!predictions && !loading) {
       setLoading(true);
+      setFetchError(null);
       const res = await fetch(`/api/match-predictions/${match.id}`);
-      if (res.ok) setPredictions(await res.json());
+      if (res.ok) {
+        setPredictions(await res.json());
+      } else {
+        const body = await res.json().catch(() => ({}));
+        setFetchError(`${res.status}: ${body.error ?? "Unknown error"}`);
+      }
       setLoading(false);
     }
   }
@@ -122,6 +129,9 @@ export function ResultsMatchCard({ match, currentUserId }: { match: Match; curre
         <div style={{ borderTop: "1px solid var(--wc-border)", background: "var(--wc-surface-alt)" }}>
           {loading && (
             <div style={{ padding: "20px 16px", textAlign: "center", fontSize: 13, color: "var(--wc-text-3)" }}>Loading…</div>
+          )}
+          {fetchError && (
+            <div style={{ padding: "20px 16px", textAlign: "center", fontSize: 13, color: "var(--wc-red)" }}>{fetchError}</div>
           )}
           {predictions && predictions.length === 0 && (
             <div style={{ padding: "20px 16px", textAlign: "center", fontSize: 13, color: "var(--wc-text-3)" }}>No predictions for this match.</div>
