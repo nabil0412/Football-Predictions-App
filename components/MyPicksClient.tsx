@@ -171,7 +171,7 @@ function PredictionRow({ p, match, teamA, teamB, showBreakdown, onToggle }: { p:
   );
 }
 
-export function MyPicksClient({ predictions, matches, teams }: { predictions: Prediction[]; matches: Match[]; teams: Team[] }) {
+export function MyPicksClient({ predictions, matches, teams, serverTotal }: { predictions: Prediction[]; matches: Match[]; teams: Team[]; serverTotal: number }) {
   const [tab, setTab] = useState<"upcoming"|"finished">("upcoming");
   const [openBreakdowns, setOpenBreakdowns] = useState<Record<number, boolean>>({});
 
@@ -180,6 +180,20 @@ export function MyPicksClient({ predictions, matches, teams }: { predictions: Pr
 
   const finished = predictions.filter(p => matchMap[p.match_id]?.status === "finished" || p.points_earned !== null);
   const upcoming = predictions.filter(p => !finished.includes(p));
+
+  // Calculate total from displayed values so it matches what each row shows
+  const calculatedTotal = predictions.reduce((sum, p) => {
+    if (p.points_earned !== null) return sum + p.points_earned;
+    const m = matchMap[p.match_id];
+    if (!m || m.team_a_score === null || m.team_b_score === null) return sum;
+    const cr = (m.team_a_score > m.team_b_score && p.predicted_result === "team_a_win") ||
+               (m.team_b_score > m.team_a_score && p.predicted_result === "team_b_win") ||
+               (m.team_a_score === m.team_b_score && p.predicted_result === "draw");
+    const ca = p.predicted_team_a_goals === Math.min(m.team_a_score, 4);
+    const cb = p.predicted_team_b_goals === Math.min(m.team_b_score, 4);
+    return sum + (cr ? 3 : 0) + (ca ? 1 : 0) + (cb ? 1 : 0) + (cr && ca && cb ? 1 : 0);
+  }, 0);
+  const totalPts = Math.max(calculatedTotal, serverTotal);
   const current = tab === "upcoming" ? upcoming : finished;
 
   const tabStyle = (id: string): React.CSSProperties => ({
@@ -191,6 +205,13 @@ export function MyPicksClient({ predictions, matches, teams }: { predictions: Pr
 
   return (
     <div style={{ paddingBottom: 80 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "24px 0 20px" }}>
+        <h1 style={{ fontSize: 26, fontWeight: 900, color: "var(--wc-text-1)", letterSpacing: "-0.02em", margin: 0 }}>My Picks</h1>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: 28, fontWeight: 900, color: "var(--wc-green)", fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>{totalPts}</div>
+          <div style={{ fontSize: 10, color: "var(--wc-text-3)", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>total pts</div>
+        </div>
+      </div>
       <div style={{ display: "flex", gap: 4, background: "var(--wc-surface-alt)", borderRadius: 10, padding: 4, marginBottom: 20 }}>
         <button style={tabStyle("upcoming")} onClick={() => setTab("upcoming")}>Upcoming · {upcoming.length}</button>
         <button style={tabStyle("finished")} onClick={() => setTab("finished")}>Finished · {finished.length}</button>

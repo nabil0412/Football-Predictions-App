@@ -42,23 +42,13 @@ export default async function MyPredictionsPage() {
     .select("id, name, iso_code, flag_url")
     .in("id", teamIds);
 
-  const totalPts = dbUser.total_score;
-
   return (
     <div style={{ maxWidth: 720, margin: "0 auto", padding: "0 16px" }}>
-      {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "24px 0 20px" }}>
-        <h1 style={{ fontSize: 26, fontWeight: 900, color: "var(--wc-text-1)", letterSpacing: "-0.02em", margin: 0 }}>My Picks</h1>
-        <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: 28, fontWeight: 900, color: "var(--wc-green)", fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>{totalPts}</div>
-          <div style={{ fontSize: 10, color: "var(--wc-text-3)", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>total pts</div>
-        </div>
-      </div>
-
       <MyPicksClient
         predictions={predictions}
         matches={matches ?? []}
         teams={teams ?? []}
+        serverTotal={dbUser.total_score}
       />
     </div>
   );
