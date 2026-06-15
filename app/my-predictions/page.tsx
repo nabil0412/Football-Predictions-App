@@ -42,7 +42,7 @@ export default async function MyPredictionsPage() {
     .select("id, name, iso_code, flag_url")
     .in("id", teamIds);
 
-  const totalPts = predictions.reduce((s, p) => s + (p.points_earned ?? 0), 0);
+  const totalPts = dbUser.total_score;
 
   return (
     <div style={{ maxWidth: 720, margin: "0 auto", padding: "0 16px" }}>
