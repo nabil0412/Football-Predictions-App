@@ -12,7 +12,8 @@ type RawMatch = {
 type RawTeam = { id: number; name: string; flag_url: string | null; iso_code: string | null };
 
 function toUTC(s: string) {
-  return new Date(s.includes('+') || s.endsWith('Z') ? s : s + 'Z').getTime();
+  const n = s.replace(' ', 'T');
+  return new Date(n.includes('+') || n.endsWith('Z') ? n : n + 'Z').getTime();
 }
 
 export default async function ResultsPage() {
