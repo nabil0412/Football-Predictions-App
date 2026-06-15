@@ -14,8 +14,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ mat
 
   if (!match) return NextResponse.json({ error: "Match not found" }, { status: 404 });
 
+  const kt = match.kickoff_time;
+  const utcKickoff = kt.includes('+') || kt.endsWith('Z') ? kt : kt + 'Z';
   const isLocked = match.status === "finished" || match.status === "live" ||
-    (match.status === "scheduled" && new Date(match.kickoff_time + "Z").getTime() <= Date.now());
+    (match.status === "scheduled" && new Date(utcKickoff).getTime() <= Date.now());
 
   if (!isLocked) return NextResponse.json({ error: "Predictions not yet revealed" }, { status: 403 });
 
