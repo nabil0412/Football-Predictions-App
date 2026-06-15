@@ -115,13 +115,19 @@ function PredictionRow({ p, match, teamA, teamB, showBreakdown, onToggle }: { p:
   const canEdit = match.status === "scheduled" && isEditable(match.kickoff_time);
   const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 
-  const isPerfect = isFinished && match.team_a_score !== null && match.team_b_score !== null && (
-    ((match.team_a_score > match.team_b_score && p.predicted_result === "team_a_win") ||
-     (match.team_b_score > match.team_a_score && p.predicted_result === "team_b_win") ||
-     (match.team_a_score === match.team_b_score && p.predicted_result === "draw")) &&
-    p.predicted_team_a_goals === Math.min(match.team_a_score, 4) &&
-    p.predicted_team_b_goals === Math.min(match.team_b_score, 4)
+  const correctResult = hasScores && (
+    (match.team_a_score! > match.team_b_score! && p.predicted_result === "team_a_win") ||
+    (match.team_b_score! > match.team_a_score! && p.predicted_result === "team_b_win") ||
+    (match.team_a_score === match.team_b_score && p.predicted_result === "draw")
   );
+  const correctA = hasScores && p.predicted_team_a_goals === Math.min(match.team_a_score!, 4);
+  const correctB = hasScores && p.predicted_team_b_goals === Math.min(match.team_b_score!, 4);
+  const isPerfect = isFinished && correctResult && correctA && correctB;
+
+  const calculatedPts = hasScores
+    ? (correctResult ? 3 : 0) + (correctA ? 1 : 0) + (correctB ? 1 : 0) + (isPerfect ? 1 : 0)
+    : null;
+  const displayPts = p.points_earned ?? calculatedPts;
 
   return (
     <div style={{ background: "var(--wc-surface)", border: "1px solid var(--wc-border)", borderRadius: 16, overflow: "hidden" }}>
@@ -145,9 +151,9 @@ function PredictionRow({ p, match, teamA, teamB, showBreakdown, onToggle }: { p:
           </div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
-          {isFinished && p.points_earned !== null && (
-            <span style={{ fontSize: 16, fontWeight: 900, fontVariantNumeric: "tabular-nums", color: p.points_earned > 0 ? "var(--wc-green)" : "var(--wc-red)" }}>
-              {p.points_earned > 0 ? "+" : ""}{p.points_earned}
+          {isFinished && displayPts !== null && (
+            <span style={{ fontSize: 16, fontWeight: 900, fontVariantNumeric: "tabular-nums", color: displayPts > 0 ? "var(--wc-green)" : "var(--wc-red)" }}>
+              {displayPts > 0 ? "+" : ""}{displayPts}
               <span style={{ fontSize: 10, fontWeight: 600, color: "var(--wc-text-3)", marginLeft: 2 }}>pts</span>
             </span>
           )}
