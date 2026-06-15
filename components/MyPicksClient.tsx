@@ -109,7 +109,7 @@ function ScoreBreakdown({ prediction, match, teamA, teamB }: { prediction: Predi
 }
 
 function PredictionRow({ p, match, teamA, teamB, showBreakdown, onToggle }: { p: Prediction; match: Match; teamA: Team; teamB: Team; showBreakdown: boolean; onToggle: () => void }) {
-  const isFinished = match.status === "finished";
+  const isFinished = match.status === "finished" || p.points_earned !== null;
   const hasScores = match.team_a_score !== null && match.team_b_score !== null;
   const isLive = match.status === "live";
   const canEdit = match.status === "scheduled" && isEditable(match.kickoff_time);
@@ -172,8 +172,8 @@ export function MyPicksClient({ predictions, matches, teams }: { predictions: Pr
   const matchMap = Object.fromEntries(matches.map(m => [m.id, m]));
   const teamMap = Object.fromEntries(teams.map(t => [t.id, t]));
 
-  const upcoming = predictions.filter(p => { const s = matchMap[p.match_id]?.status; return s !== "finished"; });
-  const finished = predictions.filter(p => matchMap[p.match_id]?.status === "finished");
+  const finished = predictions.filter(p => matchMap[p.match_id]?.status === "finished" || p.points_earned !== null);
+  const upcoming = predictions.filter(p => !finished.includes(p));
   const current = tab === "upcoming" ? upcoming : finished;
 
   const tabStyle = (id: string): React.CSSProperties => ({
