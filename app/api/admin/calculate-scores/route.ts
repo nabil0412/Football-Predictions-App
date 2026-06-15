@@ -76,14 +76,13 @@ export async function POST(req: NextRequest) {
         .eq("match_id", matchId);
     }
 
-    const { data: u } = await supabaseAdmin
-      .from("users").select("total_score").eq("id", prediction.user_id).single();
-    if (u) {
-      await supabaseAdmin
-        .from("users")
-        .update({ total_score: u.total_score + score.total })
-        .eq("id", prediction.user_id);
-    }
+    const { data: agg } = await supabaseAdmin
+      .from("predictions")
+      .select("points_earned")
+      .eq("user_id", prediction.user_id)
+      .not("points_earned", "is", null);
+    const newTotal = (agg ?? []).reduce((s: number, p: { points_earned: number }) => s + p.points_earned, 0);
+    await supabaseAdmin.from("users").update({ total_score: newTotal }).eq("id", prediction.user_id);
   }
 
   // Captain stage bonuses — only for KO rounds with a clear winner
