@@ -35,7 +35,8 @@ export default async function ResultsPage() {
     getDbUser(),
   ]);
 
-  const activeRaw = (scheduledRaw ?? []).filter(m => m.status === "live" || toUTC(m.kickoff_time) <= now);
+  const ONE_HOUR = 60 * 60 * 1000;
+  const activeRaw = (scheduledRaw ?? []).filter(m => m.status === "live" || toUTC(m.kickoff_time) - now <= ONE_HOUR);
 
   const teamMap = Object.fromEntries(((allTeams ?? []) as RawTeam[]).map(t => [t.id, t]));
 
