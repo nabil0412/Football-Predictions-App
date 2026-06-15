@@ -11,10 +11,14 @@ type RawMatch = {
 };
 type RawTeam = { id: number; name: string; flag_url: string | null; iso_code: string | null };
 
-export default async function ResultsPage() {
-  const now = new Date().toISOString();
+function toUTC(s: string) {
+  return new Date(s.includes('+') || s.endsWith('Z') ? s : s + 'Z').getTime();
+}
 
-  const [{ data: finishedRaw }, { data: activeRaw }, { data: allTeams }, dbUser] = await Promise.all([
+export default async function ResultsPage() {
+  const now = Date.now();
+
+  const [{ data: finishedRaw }, { data: scheduledRaw }, { data: allTeams }, dbUser] = await Promise.all([
     supabaseAdmin
       .from("matches")
       .select("id, kickoff_time, status, stage, matchday, team_a_score, team_b_score, team_a_id, team_b_id")
@@ -26,11 +30,12 @@ export default async function ResultsPage() {
       .from("matches")
       .select("id, kickoff_time, status, stage, matchday, team_a_score, team_b_score, team_a_id, team_b_id")
       .in("status", ["live", "scheduled"])
-      .lte("kickoff_time", now)
       .order("kickoff_time"),
     supabaseAdmin.from("teams").select("id, name, flag_url, iso_code"),
     getDbUser(),
   ]);
+
+  const activeRaw = (scheduledRaw ?? []).filter(m => m.status === "live" || toUTC(m.kickoff_time) <= now);
 
   const teamMap = Object.fromEntries(((allTeams ?? []) as RawTeam[]).map(t => [t.id, t]));
 
