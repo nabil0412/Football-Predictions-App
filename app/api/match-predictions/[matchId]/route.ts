@@ -14,10 +14,11 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ mat
 
   if (!match) return NextResponse.json({ error: "Match not found" }, { status: 404 });
 
-  const kt = match.kickoff_time;
+  const kt = match.kickoff_time.replace(' ', 'T');
   const utcKickoff = kt.includes('+') || kt.endsWith('Z') ? kt : kt + 'Z';
+  const ONE_HOUR = 60 * 60 * 1000;
   const isLocked = match.status === "finished" || match.status === "live" ||
-    (match.status === "scheduled" && new Date(utcKickoff).getTime() <= Date.now());
+    (match.status === "scheduled" && new Date(utcKickoff).getTime() - Date.now() <= ONE_HOUR);
 
   if (!isLocked) return NextResponse.json({ error: "Predictions not yet revealed" }, { status: 403 });
 
