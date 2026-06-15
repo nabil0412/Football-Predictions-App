@@ -25,7 +25,8 @@ export default async function ResultsPage() {
     supabaseAdmin
       .from("matches")
       .select("id, kickoff_time, status, stage, matchday, team_a_score, team_b_score, team_a_id, team_b_id")
-      .or(`status.eq.live,and(status.eq.scheduled,kickoff_time.lte.${now})`)
+      .in("status", ["live", "scheduled"])
+      .lte("kickoff_time", now)
       .order("kickoff_time"),
     supabaseAdmin.from("teams").select("id, name, flag_url, iso_code"),
     getDbUser(),
