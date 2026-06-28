@@ -10,6 +10,7 @@ export interface PredictionInput {
   wildcardType?: WildcardType;
   chaosCardType?: ChaosCardType;
   predictedGoesToET?: boolean;
+  predictedPenaltyWinner?: "team_a" | "team_b";
 }
 
 export interface MatchResult_ {
@@ -63,7 +64,7 @@ const CHAOS_BONUS: Record<ChaosCardType, number> = {
 };
 
 export const WILDCARD_LIMITS: Record<WildcardType, number> = {
-  confidence_pick: 2,
+  confidence_pick: 1,
   underdog_pick: 3,
   comeback_pick: 1,
   chaos_card: 3,
@@ -105,8 +106,12 @@ export function calculateScore(
       }
     }
   } else if (prediction.wildcardType === "comeback_pick") {
-    if (options.comebackOutcome && prediction.predictedResult === options.comebackOutcome) {
-      wildcardEffect = 5;
+    if (options.comebackOutcome) {
+      const penWinner = prediction.predictedPenaltyWinner;
+      const predictedWinner = prediction.predictedResult !== "draw"
+        ? prediction.predictedResult
+        : penWinner === "team_a" ? "team_a_win" : penWinner === "team_b" ? "team_b_win" : null;
+      wildcardEffect = predictedWinner === options.comebackOutcome ? 5 : -2;
     } else {
       wildcardEffect = -2;
     }

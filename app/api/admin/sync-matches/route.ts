@@ -192,6 +192,7 @@ async function scoreMatch(
         wildcardType: prediction.wildcard_type ?? undefined,
         chaosCardType: prediction.chaos_card_type ?? undefined,
         predictedGoesToET: prediction.predicted_goes_to_et ?? undefined,
+        predictedPenaltyWinner: prediction.predicted_penalty_winner ?? undefined,
       },
       { teamAScore, teamBScore },
       { underdogOutcome, comebackOutcome, chaosEventsOccurred: chaosEventsOccurred as ChaosCardType[], wentToExtraTime }

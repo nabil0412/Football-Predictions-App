@@ -97,7 +97,7 @@ export function PredictionForm({ match, existing, wildcardUsed = {}, underdogTea
     if (wildcard === "underdog_pick" && result && underdogResult && result !== underdogResult) {
       setWildcard(null);
     }
-    if (wildcard === "comeback_pick" && (!result || result === "draw")) {
+    if (wildcard === "comeback_pick" && (!result || (result === "draw" && !penaltyWinner))) {
       setWildcard(null);
     }
   }, [result, wildcard, underdogResult]);
@@ -132,12 +132,13 @@ export function PredictionForm({ match, existing, wildcardUsed = {}, underdogTea
       id: "comeback_pick" as WildcardType,
       icon: <Zap size={22} strokeWidth={1.75} />,
       name: "Comeback",
-      desc: result && result !== "draw"
-        ? `+5 if ${result === "team_a_win" ? match.teamA.name : match.teamB.name} comes from behind to win, −2 if not`
-        : "Pick a winner to use Comeback",
+      desc: (() => {
+        const winner = result !== "draw" ? (result === "team_a_win" ? match.teamA.name : match.teamB.name) : penaltyWinner === "team_a" ? match.teamA.name : penaltyWinner === "team_b" ? match.teamB.name : null;
+        return winner ? `+5 if ${winner} comes from behind to win, −2 if not` : "Pick a winner to use Comeback";
+      })(),
       badge: "+5 pts",
-      eligible: result !== "" && result !== "draw",
-      eligibilityHint: (!result || result === "draw") ? "Pick a winner first" : undefined,
+      eligible: result !== "" && (result !== "draw" || !!penaltyWinner),
+      eligibilityHint: !result || (result === "draw" && !penaltyWinner) ? "Pick a winner first" : undefined,
     }] : [{
       id: "underdog_pick" as WildcardType,
       icon: <Zap size={22} strokeWidth={1.75} />,
@@ -299,7 +300,7 @@ export function PredictionForm({ match, existing, wildcardUsed = {}, underdogTea
             const ineligible = wc.id === "underdog_pick"
               ? !underdogEligible
               : wc.id === "comeback_pick"
-              ? (wc.eligible === false || (!result || result === "draw"))
+              ? (!result || (result === "draw" && !penaltyWinner))
               : false;
 
             const blocked = !editable || exhausted || (ineligible && !active);
