@@ -102,14 +102,23 @@ export function calculateScore(
     underdogOutcome?: MatchResult;
     comebackOutcome?: MatchResult;
     wentToExtraTime?: boolean;
+    penaltyWinner?: "team_a" | "team_b" | null;
   } = {}
 ): ScoreBreakdown {
   const base = calculateBaseScore(prediction, actual);
+
+  // If predicted a winner but match went to penalties and that team won on pens → 2 pts not 3
+  const penWinner = options.penaltyWinner;
+  const predictedWinsViaPens = prediction.predictedResult !== "draw" && penWinner &&
+    prediction.predictedResult === (penWinner === "team_a" ? "team_a_win" : "team_b_win");
+  const resultPoints = predictedWinsViaPens ? 2 : base.resultPoints;
+  const perfectBonus = resultPoints > 0 && base.teamAGoalPoints > 0 && base.teamBGoalPoints > 0 ? 1 : 0;
+
   const baseTotal =
-    base.resultPoints +
+    resultPoints +
     base.teamAGoalPoints +
     base.teamBGoalPoints +
-    base.perfectBonus;
+    perfectBonus;
 
   let wildcardEffect = 0;
 
@@ -171,6 +180,8 @@ export function calculateScore(
 
   return {
     ...base,
+    resultPoints,
+    perfectBonus,
     wildcardEffect,
     etBonus,
     total: baseTotal + wildcardEffect + etBonus,

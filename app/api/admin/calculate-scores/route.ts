@@ -31,9 +31,10 @@ export async function POST(req: NextRequest) {
   let comebackTeamId: number | null = null;
   let chaosEventsOccurred: ChaosCardType[] = [];
   let wentToExtraTime = false;
+  let penaltyWinner: "team_a" | "team_b" | null = null;
   const { data: ext } = await supabaseAdmin
     .from("matches")
-    .select("underdog_team_id, comeback_team_id, chaos_events_occurred, went_to_extra_time")
+    .select("underdog_team_id, comeback_team_id, chaos_events_occurred, went_to_extra_time, penalty_winner")
     .eq("id", matchId)
     .single();
   if (ext) {
@@ -41,6 +42,7 @@ export async function POST(req: NextRequest) {
     comebackTeamId = (ext as never as { comeback_team_id: number | null }).comeback_team_id ?? null;
     chaosEventsOccurred = ((ext as never as { chaos_events_occurred: string[] | null }).chaos_events_occurred ?? []) as ChaosCardType[];
     wentToExtraTime = (ext as never as { went_to_extra_time: boolean | null }).went_to_extra_time ?? false;
+    penaltyWinner = (ext as never as { penalty_winner: "team_a" | "team_b" | null }).penalty_winner ?? null;
   }
 
   const { data: matchPredictions } = await supabaseAdmin
@@ -70,7 +72,7 @@ export async function POST(req: NextRequest) {
         predictedHattrickTeam: prediction.predicted_hattrick_team ?? undefined,
       },
       { teamAScore: match.team_a_score, teamBScore: match.team_b_score },
-      { underdogOutcome, comebackOutcome, chaosEventsOccurred, wentToExtraTime }
+      { underdogOutcome, comebackOutcome, chaosEventsOccurred, wentToExtraTime, penaltyWinner }
     );
 
     await supabaseAdmin

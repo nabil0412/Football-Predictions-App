@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
 
   // 4. Build match upsert payload
   const matchRows: object[] = [];
-  const justFinished: Array<{ extId: number; dbId: number; homeScore: number; awayScore: number; stage: string; teamAId: number; teamBId: number; utcDate: string; homeTeam: string; awayTeam: string; wentToET: boolean }> = [];
+  const justFinished: Array<{ extId: number; dbId: number; homeScore: number; awayScore: number; stage: string; teamAId: number; teamBId: number; utcDate: string; homeTeam: string; awayTeam: string; wentToET: boolean; penaltyWinner: "team_a" | "team_b" | null }> = [];
   const skippedDetails: Array<{ id: number; home: string; away: string; reason: string; apiStatus: string }> = [];
   let skipped = 0;
 
@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
     const justBecameFinished = status === "finished" && existing?.status !== "finished";
     const finishedButMissingScore = status === "finished" && existing?.status === "finished" && existing?.team_a_score == null;
     if ((justBecameFinished || finishedButMissingScore) && existing?.id && homeScore != null && awayScore != null) {
-      justFinished.push({ extId: m.id, dbId: existing.id, homeScore, awayScore, stage, teamAId, teamBId, utcDate: m.utcDate, homeTeam: m.homeTeam.name, awayTeam: m.awayTeam.name, wentToET });
+      justFinished.push({ extId: m.id, dbId: existing.id, homeScore, awayScore, stage, teamAId, teamBId, utcDate: m.utcDate, homeTeam: m.homeTeam.name, awayTeam: m.awayTeam.name, wentToET, penaltyWinner });
     }
   }
 
@@ -140,7 +140,7 @@ export async function POST(req: NextRequest) {
       if (chaosEvents.length > 0) {
         await supabaseAdmin.from("matches").update({ chaos_events_occurred: chaosEvents } as never).eq("id", f.dbId);
       }
-      scored += await scoreMatch(f.dbId, f.homeScore, f.awayScore, f.stage, f.teamAId, f.teamBId, chaosEvents, f.wentToET);
+      scored += await scoreMatch(f.dbId, f.homeScore, f.awayScore, f.stage, f.teamAId, f.teamBId, chaosEvents, f.wentToET, f.penaltyWinner);
     } catch (e) {
       scoringErrors.push(`match ${f.dbId}: ${(e as Error).message}`);
     }
@@ -165,6 +165,7 @@ async function scoreMatch(
   teamBId: number,
   chaosEventsOccurred: string[],
   wentToExtraTime = false,
+  penaltyWinner: "team_a" | "team_b" | null = null,
 ): Promise<number> {
   const { data: predictions } = await supabaseAdmin
     .from("predictions")
@@ -202,7 +203,7 @@ async function scoreMatch(
         predictedHattrickTeam: prediction.predicted_hattrick_team ?? undefined,
       },
       { teamAScore, teamBScore },
-      { underdogOutcome, comebackOutcome, chaosEventsOccurred: chaosEventsOccurred as ChaosCardType[], wentToExtraTime }
+      { underdogOutcome, comebackOutcome, chaosEventsOccurred: chaosEventsOccurred as ChaosCardType[], wentToExtraTime, penaltyWinner }
     );
 
     await supabaseAdmin.from("predictions").update({ points_earned: score.total }).eq("id", prediction.id);
