@@ -28,12 +28,17 @@ export default async function PredictionPage({ params }: { params: Promise<{ mat
     .eq("id", id)
     .single();
 
+  // Fetch same-stage match IDs to count wildcard usage per round
+  const { data: stageMatches } = await supabaseAdmin
+    .from("matches").select("id").eq("stage", match.stage).neq("id", id);
+  const stageMatchIds = (stageMatches ?? []).map(m => m.id);
+
   const [{ data: existing }, { data: wcRows }] = await Promise.all([
     dbUser
       ? supabaseAdmin.from("predictions").select("*").eq("user_id", dbUser.id).eq("match_id", id).maybeSingle()
       : Promise.resolve({ data: null }),
-    dbUser
-      ? supabaseAdmin.from("wildcard_usage").select("wildcard_type").eq("user_id", dbUser.id).neq("match_id", id)
+    dbUser && stageMatchIds.length > 0
+      ? supabaseAdmin.from("wildcard_usage").select("wildcard_type").eq("user_id", dbUser.id).in("match_id", stageMatchIds)
       : Promise.resolve({ data: [] }),
   ]);
 

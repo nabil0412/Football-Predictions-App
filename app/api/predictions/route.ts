@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { supabaseAdmin } from "@/lib/db";
 import { getOrCreateDbUser } from "@/lib/auth";
-import { WILDCARD_LIMITS, WildcardType } from "@/lib/scoring";
+import { getWildcardLimit, WildcardType } from "@/lib/scoring";
 import { format } from "date-fns";
 
 export async function POST(req: NextRequest) {
@@ -25,17 +25,18 @@ export async function POST(req: NextRequest) {
   }
 
   if (wildcardType) {
-    const limit = WILDCARD_LIMITS[wildcardType as WildcardType];
+    const limit = getWildcardLimit(wildcardType as WildcardType, match.stage);
     if (limit != null) {
-      const { count } = await supabaseAdmin
-        .from("wildcard_usage")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", dbUser.id)
-        .eq("wildcard_type", wildcardType)
-        .neq("match_id", matchId);
+      // Count usage only within the same stage/round
+      const { data: stageMatches } = await supabaseAdmin
+        .from("matches").select("id").eq("stage", match.stage).neq("id", matchId);
+      const stageMatchIds = (stageMatches ?? []).map(m => m.id);
+      const count = stageMatchIds.length > 0
+        ? (await supabaseAdmin.from("wildcard_usage").select("id", { count: "exact", head: true }).eq("user_id", dbUser.id).eq("wildcard_type", wildcardType).in("match_id", stageMatchIds)).count ?? 0
+        : 0;
 
-      if ((count ?? 0) >= limit) {
-        return NextResponse.json({ error: `You've used all ${limit} ${wildcardType.replace(/_/g, " ")} wildcards` }, { status: 400 });
+      if (count >= limit) {
+        return NextResponse.json({ error: `You've used your ${wildcardType.replace(/_/g, " ")} for this round` }, { status: 400 });
       }
     }
 

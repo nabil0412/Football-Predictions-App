@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Crosshair, Zap, Dices } from "lucide-react";
-import { WILDCARD_LIMITS } from "@/lib/scoring";
+import { getWildcardLimit } from "@/lib/scoring";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -291,7 +291,7 @@ export function PredictionForm({ match, existing, wildcardUsed = {}, underdogTea
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {WILDCARDS.map(wc => {
             const active = wildcard === wc.id;
-            const limit = WILDCARD_LIMITS[wc.id];
+            const limit = getWildcardLimit(wc.id, match.stage);
             const used = wildcardUsed[wc.id] ?? 0;
             const exhausted = used >= limit;
             const remaining = limit - used;

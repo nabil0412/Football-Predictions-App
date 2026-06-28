@@ -64,11 +64,24 @@ const CHAOS_BONUS: Record<ChaosCardType, number> = {
 };
 
 export const WILDCARD_LIMITS: Record<WildcardType, number> = {
-  confidence_pick: 1,
+  confidence_pick: 2,
   underdog_pick: 3,
   comeback_pick: 1,
   chaos_card: 3,
 };
+
+const KO_STAGES = new Set(["round_of_32", "round_of_16", "quarter_final", "semi_final", "final"]);
+
+const KO_WILDCARD_LIMITS: Record<WildcardType, number> = {
+  confidence_pick: 1,
+  underdog_pick: 0,
+  comeback_pick: 1,
+  chaos_card: 3,
+};
+
+export function getWildcardLimit(type: WildcardType, stage: string): number {
+  return KO_STAGES.has(stage) ? KO_WILDCARD_LIMITS[type] : WILDCARD_LIMITS[type];
+}
 
 export function calculateScore(
   prediction: PredictionInput,
