@@ -28,15 +28,17 @@ export async function POST(req: NextRequest) {
 
   // Best-effort: read new columns if migration has run
   let underdogTeamId: number | null = null;
+  let comebackTeamId: number | null = null;
   let chaosEventsOccurred: ChaosCardType[] = [];
   let wentToExtraTime = false;
   const { data: ext } = await supabaseAdmin
     .from("matches")
-    .select("underdog_team_id, chaos_events_occurred, went_to_extra_time")
+    .select("underdog_team_id, comeback_team_id, chaos_events_occurred, went_to_extra_time")
     .eq("id", matchId)
     .single();
   if (ext) {
     underdogTeamId = (ext as never as { underdog_team_id: number | null }).underdog_team_id ?? null;
+    comebackTeamId = (ext as never as { comeback_team_id: number | null }).comeback_team_id ?? null;
     chaosEventsOccurred = ((ext as never as { chaos_events_occurred: string[] | null }).chaos_events_occurred ?? []) as ChaosCardType[];
     wentToExtraTime = (ext as never as { went_to_extra_time: boolean | null }).went_to_extra_time ?? false;
   }
@@ -46,10 +48,13 @@ export async function POST(req: NextRequest) {
 
   if (!matchPredictions?.length) return NextResponse.json({ processed: 0 });
 
-  // Determine underdog outcome from stored odds data
   let underdogOutcome: "team_a_win" | "draw" | "team_b_win" | undefined;
   if (underdogTeamId) {
     underdogOutcome = underdogTeamId === match.team_a_id ? "team_a_win" : "team_b_win";
+  }
+  let comebackOutcome: "team_a_win" | "team_b_win" | undefined;
+  if (comebackTeamId) {
+    comebackOutcome = comebackTeamId === match.team_a_id ? "team_a_win" : "team_b_win";
   }
 
   for (const prediction of matchPredictions) {
@@ -63,7 +68,7 @@ export async function POST(req: NextRequest) {
         predictedGoesToET: prediction.predicted_goes_to_et ?? undefined,
       },
       { teamAScore: match.team_a_score, teamBScore: match.team_b_score },
-      { underdogOutcome, chaosEventsOccurred, wentToExtraTime }
+      { underdogOutcome, comebackOutcome, chaosEventsOccurred, wentToExtraTime }
     );
 
     await supabaseAdmin

@@ -170,13 +170,17 @@ async function scoreMatch(
 
   const { data: ext } = await supabaseAdmin
     .from("matches")
-    .select("underdog_team_id")
+    .select("underdog_team_id, comeback_team_id")
     .eq("id", matchId)
     .single();
 
   const underdogTeamId = (ext as never as { underdog_team_id: number | null } | null)?.underdog_team_id ?? null;
   const underdogOutcome = underdogTeamId
     ? (underdogTeamId === teamAId ? "team_a_win" : "team_b_win") as "team_a_win" | "team_b_win"
+    : undefined;
+  const comebackTeamId = (ext as never as { comeback_team_id: number | null } | null)?.comeback_team_id ?? null;
+  const comebackOutcome = comebackTeamId
+    ? (comebackTeamId === teamAId ? "team_a_win" : "team_b_win") as "team_a_win" | "team_b_win"
     : undefined;
 
   for (const prediction of predictions) {
@@ -190,7 +194,7 @@ async function scoreMatch(
         predictedGoesToET: prediction.predicted_goes_to_et ?? undefined,
       },
       { teamAScore, teamBScore },
-      { underdogOutcome, chaosEventsOccurred: chaosEventsOccurred as ChaosCardType[], wentToExtraTime }
+      { underdogOutcome, comebackOutcome, chaosEventsOccurred: chaosEventsOccurred as ChaosCardType[], wentToExtraTime }
     );
 
     await supabaseAdmin.from("predictions").update({ points_earned: score.total }).eq("id", prediction.id);

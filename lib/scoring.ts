@@ -1,6 +1,6 @@
 export type GoalBucket = 0 | 1 | 2 | 3 | 4;
 export type MatchResult = "team_a_win" | "draw" | "team_b_win";
-export type WildcardType = "confidence_pick" | "underdog_pick" | "chaos_card";
+export type WildcardType = "confidence_pick" | "underdog_pick" | "comeback_pick" | "chaos_card";
 export type ChaosCardType = "common" | "medium" | "rare";
 
 export interface PredictionInput {
@@ -65,6 +65,7 @@ const CHAOS_BONUS: Record<ChaosCardType, number> = {
 export const WILDCARD_LIMITS: Record<WildcardType, number> = {
   confidence_pick: 2,
   underdog_pick: 3,
+  comeback_pick: 1,
   chaos_card: 3,
 };
 
@@ -74,6 +75,7 @@ export function calculateScore(
   options: {
     chaosEventsOccurred?: ChaosCardType[];
     underdogOutcome?: MatchResult;
+    comebackOutcome?: MatchResult;
     wentToExtraTime?: boolean;
   } = {}
 ): ScoreBreakdown {
@@ -101,6 +103,12 @@ export function calculateScore(
       } else if (prediction.predictedResult === options.underdogOutcome) {
         wildcardEffect = -3;
       }
+    }
+  } else if (prediction.wildcardType === "comeback_pick") {
+    if (options.comebackOutcome && prediction.predictedResult === options.comebackOutcome) {
+      wildcardEffect = 5;
+    } else {
+      wildcardEffect = -2;
     }
   } else if (prediction.wildcardType === "chaos_card") {
     if (prediction.chaosCardType === "rare") {

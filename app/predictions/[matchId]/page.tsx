@@ -24,7 +24,7 @@ export default async function PredictionPage({ params }: { params: Promise<{ mat
 
   const { data: matchFull } = await supabaseAdmin
     .from("matches")
-    .select("underdog_team_id")
+    .select("underdog_team_id, comeback_team_id")
     .eq("id", id)
     .single();
 
@@ -55,6 +55,7 @@ export default async function PredictionPage({ params }: { params: Promise<{ mat
         existing={existing ?? null}
         wildcardUsed={wildcardUsed}
         underdogTeamId={matchFull?.underdog_team_id ?? null}
+        comebackTeamId={matchFull?.comeback_team_id ?? null}
       />
     </div>
   );

@@ -6,7 +6,7 @@ import { WILDCARD_LIMITS } from "@/lib/scoring";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-type WildcardType = "confidence_pick" | "underdog_pick" | "chaos_card";
+type WildcardType = "confidence_pick" | "underdog_pick" | "comeback_pick" | "chaos_card";
 type ChaosCardType = "common" | "medium" | "rare";
 type Result = "team_a_win" | "draw" | "team_b_win";
 
@@ -59,7 +59,7 @@ function fmtDate(dt: Date | string) {
   return toUTC(dt).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 }
 
-export function PredictionForm({ match, existing, wildcardUsed = {}, underdogTeamId = null }: { match: MatchData; existing?: ExistingPrediction | null; wildcardUsed?: Record<string, number>; underdogTeamId?: number | null }) {
+export function PredictionForm({ match, existing, wildcardUsed = {}, underdogTeamId = null, comebackTeamId = null }: { match: MatchData; existing?: ExistingPrediction | null; wildcardUsed?: Record<string, number>; underdogTeamId?: number | null; comebackTeamId?: number | null }) {
   const router = useRouter();
   const editable = isEditable(match.kickoffTime) && match.status === "scheduled";
   const [aGoals, setAGoals] = useState(existing ? String(existing.predicted_team_a_goals) : "");
@@ -92,9 +92,12 @@ export function PredictionForm({ match, existing, wildcardUsed = {}, underdogTea
 
   useEffect(() => { if (derived !== null) setManualResult(derived); }, [derived]);
 
-  // Auto-deselect underdog wildcard if result no longer matches underdog
+  // Auto-deselect underdog/comeback wildcard if result no longer valid
   useEffect(() => {
     if (wildcard === "underdog_pick" && result && underdogResult && result !== underdogResult) {
+      setWildcard(null);
+    }
+    if (wildcard === "comeback_pick" && (!result || result === "draw")) {
       setWildcard(null);
     }
   }, [result, wildcard, underdogResult]);
@@ -125,8 +128,18 @@ export function PredictionForm({ match, existing, wildcardUsed = {}, underdogTea
       desc: "Doubles your points if correct, −3 if wrong",
       badge: "×2 pts",
     },
-    {
-      id: "underdog_pick",
+    ...(isKnockout ? [{
+      id: "comeback_pick" as WildcardType,
+      icon: <Zap size={22} strokeWidth={1.75} />,
+      name: "Comeback",
+      desc: result && result !== "draw"
+        ? `+5 if ${result === "team_a_win" ? match.teamA.name : match.teamB.name} comes from behind to win, −2 if not`
+        : "Pick a winner to use Comeback",
+      badge: "+5 pts",
+      eligible: result !== "" && result !== "draw",
+      eligibilityHint: (!result || result === "draw") ? "Pick a winner first" : undefined,
+    }] : [{
+      id: "underdog_pick" as WildcardType,
       icon: <Zap size={22} strokeWidth={1.75} />,
       name: "Underdog",
       desc: underdogTeam
@@ -139,7 +152,7 @@ export function PredictionForm({ match, existing, wildcardUsed = {}, underdogTea
         : result !== underdogResult
         ? `Pick ${underdogTeam?.name} to win first`
         : undefined,
-    },
+    }]),
     {
       id: "chaos_card",
       icon: <Dices size={22} strokeWidth={1.75} />,
@@ -285,7 +298,9 @@ export function PredictionForm({ match, existing, wildcardUsed = {}, underdogTea
             // Per-wildcard eligibility
             const ineligible = wc.id === "underdog_pick"
               ? !underdogEligible
-              : false; // chaos_card and confidence_pick always eligible (rare validated separately)
+              : wc.id === "comeback_pick"
+              ? (wc.eligible === false || (!result || result === "draw"))
+              : false;
 
             const blocked = !editable || exhausted || (ineligible && !active);
             const hint = exhausted
