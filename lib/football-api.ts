@@ -53,6 +53,7 @@ export function mapApiStageToDb(apiStage: string): string {
   const map: Record<string, string> = {
     GROUP_STAGE: "group",
     ROUND_OF_32: "round_of_32",
+    LAST_32: "round_of_32",
     LAST_16: "round_of_16",
     QUARTER_FINALS: "quarter_final",
     SEMI_FINALS: "semi_final",
