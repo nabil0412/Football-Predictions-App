@@ -11,6 +11,7 @@ export interface PredictionInput {
   chaosCardType?: ChaosCardType;
   predictedGoesToET?: boolean;
   predictedPenaltyWinner?: "team_a" | "team_b";
+  predictedHattrickTeam?: "team_a" | "team_b" | "both";
 }
 
 export interface MatchResult_ {
@@ -137,15 +138,22 @@ export function calculateScore(
   } else if (prediction.wildcardType === "chaos_card") {
     if (prediction.chaosCardType === "rare") {
       const events = options.chaosEventsOccurred as string[] | undefined;
-      const homeHattrick = events?.includes("rare_a");
-      const awayHattrick = events?.includes("rare_b");
-      const predictedHomeHattrick = prediction.predictedTeamAGoals >= 3;
-      const predictedAwayHattrick = prediction.predictedTeamBGoals >= 3;
-      if ((predictedHomeHattrick && homeHattrick) || (predictedAwayHattrick && awayHattrick)) {
-        wildcardEffect = CHAOS_BONUS["rare"];
+      const homeHattrick = !!events?.includes("rare_a");
+      const awayHattrick = !!events?.includes("rare_b");
+      const predictedBothTeams = prediction.predictedTeamAGoals >= 3 && prediction.predictedTeamBGoals >= 3;
+
+      let hit = false;
+      if (predictedBothTeams) {
+        if (prediction.predictedHattrickTeam === "team_a") hit = homeHattrick;
+        else if (prediction.predictedHattrickTeam === "team_b") hit = awayHattrick;
+        else if (prediction.predictedHattrickTeam === "both") hit = homeHattrick && awayHattrick;
+        // no spec = no hit
       } else {
-        wildcardEffect = CHAOS_PENALTY["rare"];
+        hit = (prediction.predictedTeamAGoals >= 3 && homeHattrick) ||
+              (prediction.predictedTeamBGoals >= 3 && awayHattrick);
       }
+
+      wildcardEffect = hit ? CHAOS_BONUS["rare"] : CHAOS_PENALTY["rare"];
     } else if (prediction.chaosCardType) {
       if (options.chaosEventsOccurred?.includes(prediction.chaosCardType)) {
         wildcardEffect = CHAOS_BONUS[prediction.chaosCardType];

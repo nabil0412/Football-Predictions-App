@@ -20,6 +20,7 @@ interface ExistingPrediction {
   predicted_result: Result; predicted_team_a_goals: number; predicted_team_b_goals: number;
   wildcard_type?: WildcardType | null; chaos_card_type?: ChaosCardType | null;
   predicted_goes_to_et?: boolean | null; predicted_penalty_winner?: string | null;
+  predicted_hattrick_team?: "team_a" | "team_b" | "both" | null;
 }
 
 // WILDCARDS built inside component so desc can reference underdogTeam name
@@ -71,6 +72,9 @@ export function PredictionForm({ match, existing, wildcardUsed = {}, underdogTea
   const [penaltyWinner, setPenaltyWinner] = useState<"team_a" | "team_b" | null>(
     (existing?.predicted_penalty_winner as "team_a" | "team_b" | null) ?? null
   );
+  const [hattrickTeam, setHattrickTeam] = useState<"team_a" | "team_b" | "both" | null>(
+    existing?.predicted_hattrick_team ?? null
+  );
 
   // Underdog: which result outcome means the underdog wins
   const underdogResult: Result | null = underdogTeamId
@@ -114,11 +118,16 @@ export function PredictionForm({ match, existing, wildcardUsed = {}, underdogTea
       setChaos(null);
       if (wildcard === "chaos_card") setWildcard(null);
     }
+    // Reset hattrick team pick if no longer both 3+
+    if (!(parseInt(aGoals) >= 3 && parseInt(bGoals) >= 3)) {
+      setHattrickTeam(null);
+    }
   }, [aGoals, bGoals, chaos, wildcard]);
 
   // Per-wildcard eligibility
   const underdogEligible = underdogResult !== null && result === underdogResult;
   const rareEligible = parseInt(aGoals) >= 3 || parseInt(bGoals) >= 3;
+  const bothTeams3Plus = parseInt(aGoals) >= 3 && parseInt(bGoals) >= 3;
 
   const WILDCARDS: { id: WildcardType; icon: React.ReactNode; name: string; desc: string; badge: string; eligible?: boolean; eligibilityHint?: string }[] = [
     {
@@ -168,10 +177,11 @@ export function PredictionForm({ match, existing, wildcardUsed = {}, underdogTea
     if (!result) { toast.error("Pick a result — both teams at 4+ is ambiguous."); return; }
     if (wildcard === "chaos_card" && !chaos) { toast.error("Choose a chaos event."); return; }
     if (isKnockout && result === "draw" && !penaltyWinner) { toast.error("Select who wins on penalties."); return; }
+    if (wildcard === "chaos_card" && chaos === "rare" && bothTeams3Plus && !hattrickTeam) { toast.error("Select which team scores the hat-trick."); return; }
     setSubmitting(true);
     const res = await fetch("/api/predictions", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ matchId: match.id, predictedResult: result, predictedTeamAGoals: parseInt(aGoals), predictedTeamBGoals: parseInt(bGoals), wildcardType: wildcard ?? undefined, chaosCardType: wildcard === "chaos_card" ? chaos : undefined, predictedGoesToET: isKnockout && result !== "draw" ? goesToET : undefined, predictedPenaltyWinner: isKnockout && result === "draw" ? penaltyWinner : undefined }),
+      body: JSON.stringify({ matchId: match.id, predictedResult: result, predictedTeamAGoals: parseInt(aGoals), predictedTeamBGoals: parseInt(bGoals), wildcardType: wildcard ?? undefined, chaosCardType: wildcard === "chaos_card" ? chaos : undefined, predictedGoesToET: isKnockout && result !== "draw" ? goesToET : undefined, predictedPenaltyWinner: isKnockout && result === "draw" ? penaltyWinner : undefined, predictedHattrickTeam: wildcard === "chaos_card" && chaos === "rare" && bothTeams3Plus ? hattrickTeam : undefined }),
     });
     const data = await res.json();
     setSubmitting(false);
@@ -370,6 +380,25 @@ export function PredictionForm({ match, existing, wildcardUsed = {}, underdogTea
                 );
               })}
             </div>
+
+            {chaos === "rare" && bothTeams3Plus && (
+              <div style={{ marginTop: 12 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--wc-text-3)", marginBottom: 8 }}>
+                  Who scores the hat-trick? <span style={{ color: "var(--wc-red)" }}>*</span>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {([["team_a", match.teamA.name], ["team_b", match.teamB.name], ["both", "Both"]] as const).map(([side, label]) => {
+                    const active = hattrickTeam === side;
+                    return (
+                      <button key={side} onClick={() => editable && setHattrickTeam(active ? null : side)}
+                        style={{ flex: 1, minHeight: 38, borderRadius: 10, background: active ? "rgba(34,197,94,0.08)" : "var(--wc-surface-alt)", border: `1.5px solid ${active ? "var(--wc-green)" : "var(--wc-border)"}`, color: active ? "var(--wc-green)" : "var(--wc-text-2)", fontSize: 12, fontWeight: 700, cursor: editable ? "pointer" : "not-allowed", transition: "all 0.15s" }}>
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

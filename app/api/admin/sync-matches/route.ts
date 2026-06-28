@@ -193,6 +193,7 @@ async function scoreMatch(
         chaosCardType: prediction.chaos_card_type ?? undefined,
         predictedGoesToET: prediction.predicted_goes_to_et ?? undefined,
         predictedPenaltyWinner: prediction.predicted_penalty_winner ?? undefined,
+        predictedHattrickTeam: prediction.predicted_hattrick_team ?? undefined,
       },
       { teamAScore, teamBScore },
       { underdogOutcome, comebackOutcome, chaosEventsOccurred: chaosEventsOccurred as ChaosCardType[], wentToExtraTime }

@@ -67,6 +67,7 @@ export async function POST(req: NextRequest) {
         chaosCardType: prediction.chaos_card_type ?? undefined,
         predictedGoesToET: prediction.predicted_goes_to_et ?? undefined,
         predictedPenaltyWinner: prediction.predicted_penalty_winner ?? undefined,
+        predictedHattrickTeam: prediction.predicted_hattrick_team ?? undefined,
       },
       { teamAScore: match.team_a_score, teamBScore: match.team_b_score },
       { underdogOutcome, comebackOutcome, chaosEventsOccurred, wentToExtraTime }

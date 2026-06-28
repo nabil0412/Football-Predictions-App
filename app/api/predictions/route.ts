@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
   const dbUser = await getOrCreateDbUser();
   if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-  const { matchId, predictedResult, predictedTeamAGoals, predictedTeamBGoals, wildcardType, chaosCardType, predictedGoesToET, predictedPenaltyWinner } = await req.json();
+  const { matchId, predictedResult, predictedTeamAGoals, predictedTeamBGoals, wildcardType, chaosCardType, predictedGoesToET, predictedPenaltyWinner, predictedHattrickTeam } = await req.json();
 
   const { data: match } = await supabaseAdmin.from("matches").select("id, status, kickoff_time, stage").eq("id", matchId).single();
   if (!match) return NextResponse.json({ error: "Match not found" }, { status: 404 });
@@ -71,6 +71,7 @@ export async function POST(req: NextRequest) {
     chaos_card_type: chaosCardType ?? null,
     predicted_goes_to_et: isKnockout && predictedResult !== "draw" ? (predictedGoesToET ?? false) : null,
     predicted_penalty_winner: isKnockout && predictedResult === "draw" ? (predictedPenaltyWinner ?? null) : null,
+    predicted_hattrick_team: wildcardType === "chaos_card" && chaosCardType === "rare" && predictedTeamAGoals >= 3 && predictedTeamBGoals >= 3 ? (predictedHattrickTeam ?? null) : null,
     updated_at: new Date().toISOString(),
   }, { onConflict: "user_id,match_id" });
 
