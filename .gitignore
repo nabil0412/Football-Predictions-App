@@ -31,7 +31,7 @@ foorball\ predictions.zip
 *.jpg
 *.png
 *.zip
-proxy.ts
+.env.test
 
 # build artifacts
 tsconfig.tsbuildinfo
