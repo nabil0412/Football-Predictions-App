@@ -63,6 +63,12 @@ const CHAOS_BONUS: Record<ChaosCardType, number> = {
   rare: 12,
 };
 
+const CHAOS_PENALTY: Record<ChaosCardType, number> = {
+  common: -1,
+  medium: -2,
+  rare: -4,
+};
+
 export const WILDCARD_LIMITS: Record<WildcardType, number> = {
   confidence_pick: 2,
   underdog_pick: 3,
@@ -130,7 +136,6 @@ export function calculateScore(
     }
   } else if (prediction.wildcardType === "chaos_card") {
     if (prediction.chaosCardType === "rare") {
-      // Hat-trick: only counts for the team the user predicted to score 3+ goals
       const events = options.chaosEventsOccurred as string[] | undefined;
       const homeHattrick = events?.includes("rare_a");
       const awayHattrick = events?.includes("rare_b");
@@ -138,9 +143,15 @@ export function calculateScore(
       const predictedAwayHattrick = prediction.predictedTeamBGoals >= 3;
       if ((predictedHomeHattrick && homeHattrick) || (predictedAwayHattrick && awayHattrick)) {
         wildcardEffect = CHAOS_BONUS["rare"];
+      } else {
+        wildcardEffect = CHAOS_PENALTY["rare"];
       }
-    } else if (prediction.chaosCardType && options.chaosEventsOccurred?.includes(prediction.chaosCardType)) {
-      wildcardEffect = CHAOS_BONUS[prediction.chaosCardType];
+    } else if (prediction.chaosCardType) {
+      if (options.chaosEventsOccurred?.includes(prediction.chaosCardType)) {
+        wildcardEffect = CHAOS_BONUS[prediction.chaosCardType];
+      } else {
+        wildcardEffect = CHAOS_PENALTY[prediction.chaosCardType];
+      }
     }
   }
 

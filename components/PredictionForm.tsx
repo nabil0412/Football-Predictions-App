@@ -24,9 +24,9 @@ interface ExistingPrediction {
 
 // WILDCARDS built inside component so desc can reference underdogTeam name
 const CHAOS_EVENTS = [
-  { id: "common" as ChaosCardType, label: "Common", desc: "Red card in the game",   bonus: "+4",  requiresGoals: false },
-  { id: "medium" as ChaosCardType, label: "Medium", desc: "VAR overturned goal",     bonus: "+7",  requiresGoals: false },
-  { id: "rare"   as ChaosCardType, label: "Rare",   desc: "Hat-trick (3+ goals)",    bonus: "+12", requiresGoals: true  },
+  { id: "common" as ChaosCardType, label: "Common", desc: "Red card in the game",   bonus: "+4",  penalty: "-1", requiresGoals: false },
+  { id: "medium" as ChaosCardType, label: "Medium", desc: "VAR overturned goal",     bonus: "+7",  penalty: "-2", requiresGoals: false },
+  { id: "rare"   as ChaosCardType, label: "Rare",   desc: "Hat-trick (3+ goals)",    bonus: "+12", penalty: "-4", requiresGoals: true  },
 ];
 const GOALS = [0, 1, 2, 3, "4+"] as const;
 
@@ -362,7 +362,7 @@ export function PredictionForm({ match, existing, wildcardUsed = {}, underdogTea
                       opacity: evBlocked ? 0.35 : 1,
                     }}
                   >
-                    <div style={{ fontSize: 11, fontWeight: 700, color: active ? "var(--wc-green)" : "var(--wc-text-1)" }}>{ev.bonus}</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: active ? "var(--wc-green)" : "var(--wc-text-1)" }}>{ev.bonus} / <span style={{ color: "var(--wc-red)" }}>{ev.penalty}</span></div>
                     <div style={{ fontSize: 12, fontWeight: 600, color: active ? "var(--wc-text-1)" : "var(--wc-text-2)", marginTop: 2 }}>{ev.label}</div>
                     <div style={{ fontSize: 10, color: "var(--wc-text-3)", marginTop: 2 }}>{ev.desc}</div>
                     {evBlocked && <div style={{ fontSize: 9, color: "var(--wc-red)", marginTop: 3, fontWeight: 700 }}>Need 3+ goals</div>}
