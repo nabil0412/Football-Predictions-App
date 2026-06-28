@@ -76,7 +76,7 @@ const KO_WILDCARD_LIMITS: Record<WildcardType, number> = {
   confidence_pick: 1,
   underdog_pick: 0,
   comeback_pick: 1,
-  chaos_card: 3,
+  chaos_card: 1,
 };
 
 export function getWildcardLimit(type: WildcardType, stage: string): number {
