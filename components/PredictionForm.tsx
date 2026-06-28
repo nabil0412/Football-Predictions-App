@@ -234,9 +234,6 @@ export function PredictionForm({ match, existing, wildcardUsed = {}, underdogTea
           </div>
         )}
 
-        {/* DEBUG - remove after testing */}
-        <div style={{ fontSize: 10, color: "red" }}>stage: {match.stage} | ko: {String(isKnockout)}</div>
-
         {/* Knockout extra options */}
         {isKnockout && result && !ambiguous && (
           <div style={{ marginTop: 14, borderTop: "1px solid var(--wc-border)", paddingTop: 14 }}>
