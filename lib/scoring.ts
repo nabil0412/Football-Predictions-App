@@ -47,7 +47,11 @@ export function calculateBaseScore(
   const actualTeamABucket = toGoalBucket(actual.teamAScore);
   const actualTeamBBucket = toGoalBucket(actual.teamBScore);
 
-  const resultPoints = prediction.predictedResult === actualResult ? 3 : 0;
+  const impliedWinner = prediction.predictedPenaltyWinner === "team_a" ? "team_a_win"
+    : prediction.predictedPenaltyWinner === "team_b" ? "team_b_win" : null;
+  const resultPoints = prediction.predictedResult === actualResult ? 3
+    : prediction.predictedResult === "draw" && impliedWinner && actualResult === impliedWinner ? 2
+    : 0;
   const teamAGoalPoints =
     prediction.predictedTeamAGoals === actualTeamABucket ? 1 : 0;
   const teamBGoalPoints =
