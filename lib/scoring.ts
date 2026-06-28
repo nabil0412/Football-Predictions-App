@@ -40,7 +40,7 @@ function getActualResult(teamAScore: number, teamBScore: number): MatchResult {
 export function calculateBaseScore(
   prediction: PredictionInput,
   actual: MatchResult_
-): Omit<ScoreBreakdown, "wildcardEffect" | "total"> {
+): Omit<ScoreBreakdown, "wildcardEffect" | "total" | "etBonus"> {
   const actualResult = getActualResult(actual.teamAScore, actual.teamBScore);
   const actualTeamABucket = toGoalBucket(actual.teamAScore);
   const actualTeamBBucket = toGoalBucket(actual.teamBScore);
