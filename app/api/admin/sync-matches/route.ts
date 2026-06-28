@@ -91,7 +91,11 @@ export async function POST(req: NextRequest) {
     const penaltyWinner = penaltyHome != null && penaltyAway != null
       ? (penaltyHome > penaltyAway ? "team_a" : "team_b")
       : null;
-    const stage = mapApiStageToDb(m.stage);
+    const apiStage = mapApiStageToDb(m.stage);
+    // Temporary: API reports GROUP_STAGE for KO matches — override by date until fixed
+    const stage = (apiStage === "group" && new Date(m.utcDate) >= new Date("2026-06-29T00:00:00Z"))
+      ? "round_of_32"
+      : apiStage;
 
     const existing = existingByExtId[m.id];
     // Never downgrade a finished match — API sometimes briefly mis-reports status
