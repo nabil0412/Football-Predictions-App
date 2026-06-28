@@ -29,14 +29,16 @@ export async function POST(req: NextRequest) {
   // Best-effort: read new columns if migration has run
   let underdogTeamId: number | null = null;
   let chaosEventsOccurred: ChaosCardType[] = [];
+  let wentToExtraTime = false;
   const { data: ext } = await supabaseAdmin
     .from("matches")
-    .select("underdog_team_id, chaos_events_occurred")
+    .select("underdog_team_id, chaos_events_occurred, went_to_extra_time")
     .eq("id", matchId)
     .single();
   if (ext) {
     underdogTeamId = (ext as never as { underdog_team_id: number | null }).underdog_team_id ?? null;
     chaosEventsOccurred = ((ext as never as { chaos_events_occurred: string[] | null }).chaos_events_occurred ?? []) as ChaosCardType[];
+    wentToExtraTime = (ext as never as { went_to_extra_time: boolean | null }).went_to_extra_time ?? false;
   }
 
   const { data: matchPredictions } = await supabaseAdmin
@@ -58,9 +60,10 @@ export async function POST(req: NextRequest) {
         predictedTeamBGoals: prediction.predicted_team_b_goals as 0|1|2|3|4,
         wildcardType: prediction.wildcard_type ?? undefined,
         chaosCardType: prediction.chaos_card_type ?? undefined,
+        predictedGoesToET: prediction.predicted_goes_to_et ?? undefined,
       },
       { teamAScore: match.team_a_score, teamBScore: match.team_b_score },
-      { underdogOutcome, chaosEventsOccurred }
+      { underdogOutcome, chaosEventsOccurred, wentToExtraTime }
     );
 
     await supabaseAdmin

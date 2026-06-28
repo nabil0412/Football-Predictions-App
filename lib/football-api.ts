@@ -21,6 +21,9 @@ export interface ApiMatch {
   awayTeam: ApiTeam;
   score: {
     fullTime: { home: number | null; away: number | null };
+    regularTime?: { home: number | null; away: number | null };
+    extraTime?: { home: number | null; away: number | null };
+    penalties?: { home: number | null; away: number | null };
   };
 }
 
@@ -55,5 +58,5 @@ export function mapApiStageToDb(apiStage: string): string {
     SEMI_FINALS: "semi_final",
     FINAL: "final",
   };
-  return map[apiStage] ?? "group";
+  return map[apiStage] ?? apiStage.toLowerCase();
 }

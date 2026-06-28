@@ -9,6 +9,7 @@ export interface PredictionInput {
   predictedTeamBGoals: GoalBucket;
   wildcardType?: WildcardType;
   chaosCardType?: ChaosCardType;
+  predictedGoesToET?: boolean;
 }
 
 export interface MatchResult_ {
@@ -22,6 +23,7 @@ export interface ScoreBreakdown {
   teamBGoalPoints: number;
   perfectBonus: number;
   wildcardEffect: number;
+  etBonus: number;
   total: number;
 }
 
@@ -72,6 +74,7 @@ export function calculateScore(
   options: {
     chaosEventsOccurred?: ChaosCardType[];
     underdogOutcome?: MatchResult;
+    wentToExtraTime?: boolean;
   } = {}
 ): ScoreBreakdown {
   const base = calculateBaseScore(prediction, actual);
@@ -115,18 +118,21 @@ export function calculateScore(
     }
   }
 
+  const etBonus = prediction.predictedGoesToET && options.wentToExtraTime ? 1 : 0;
+
   return {
     ...base,
     wildcardEffect,
-    total: baseTotal + wildcardEffect,
+    etBonus,
+    total: baseTotal + wildcardEffect + etBonus,
   };
 }
 
 export const CAPTAIN_STAGE_BONUS: Record<string, number> = {
-  round_of_32: 2,
-  round_of_16: 3,
-  quarter_final: 6,
-  semi_final: 10,
-  final: 15,
-  wins_world_cup: 25,
+  round_of_32: 1,
+  round_of_16: 2,
+  quarter_final: 2,
+  semi_final: 2,
+  final: 3,
+  wins_world_cup: 5,
 };

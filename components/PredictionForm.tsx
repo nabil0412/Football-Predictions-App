@@ -19,6 +19,7 @@ interface MatchData {
 interface ExistingPrediction {
   predicted_result: Result; predicted_team_a_goals: number; predicted_team_b_goals: number;
   wildcard_type?: WildcardType | null; chaos_card_type?: ChaosCardType | null;
+  predicted_goes_to_et?: boolean | null; predicted_penalty_winner?: string | null;
 }
 
 // WILDCARDS built inside component so desc can reference underdogTeam name
@@ -66,6 +67,10 @@ export function PredictionForm({ match, existing, wildcardUsed = {}, underdogTea
   const [manualResult, setManualResult] = useState<Result | "">(existing?.predicted_result ?? "");
   const [wildcard, setWildcard] = useState<WildcardType | null>(existing?.wildcard_type ?? null);
   const [chaos, setChaos] = useState<ChaosCardType | null>(existing?.chaos_card_type ?? null);
+  const [goesToET, setGoesToET] = useState<boolean>(existing?.predicted_goes_to_et ?? false);
+  const [penaltyWinner, setPenaltyWinner] = useState<"team_a" | "team_b" | null>(
+    (existing?.predicted_penalty_winner as "team_a" | "team_b" | null) ?? null
+  );
 
   // Underdog: which result outcome means the underdog wins
   const underdogResult: Result | null = underdogTeamId
@@ -76,6 +81,9 @@ export function PredictionForm({ match, existing, wildcardUsed = {}, underdogTea
     : null;
   const [saved, setSaved] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  const KO_STAGES = ["round_of_32", "round_of_16", "quarter_final", "semi_final", "final"];
+  const isKnockout = KO_STAGES.includes(match.stage);
 
   const derived = deriveResult(aGoals, bGoals);
   const result: Result | "" = derived ?? manualResult;
@@ -90,6 +98,12 @@ export function PredictionForm({ match, existing, wildcardUsed = {}, underdogTea
       setWildcard(null);
     }
   }, [result, wildcard, underdogResult]);
+
+  // Reset ET/penalty when result changes
+  useEffect(() => {
+    if (result === "draw") setGoesToET(false);
+    else setPenaltyWinner(null);
+  }, [result]);
 
   // Auto-deselect rare chaos if no team predicted to score 3+
   useEffect(() => {
@@ -139,10 +153,11 @@ export function PredictionForm({ match, existing, wildcardUsed = {}, underdogTea
     if (aGoals === "" || bGoals === "") { toast.error("Pick goal counts for both teams."); return; }
     if (!result) { toast.error("Pick a result — both teams at 4+ is ambiguous."); return; }
     if (wildcard === "chaos_card" && !chaos) { toast.error("Choose a chaos event."); return; }
+    if (isKnockout && result === "draw" && !penaltyWinner) { toast.error("Select who wins on penalties."); return; }
     setSubmitting(true);
     const res = await fetch("/api/predictions", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ matchId: match.id, predictedResult: result, predictedTeamAGoals: parseInt(aGoals), predictedTeamBGoals: parseInt(bGoals), wildcardType: wildcard ?? undefined, chaosCardType: wildcard === "chaos_card" ? chaos : undefined }),
+      body: JSON.stringify({ matchId: match.id, predictedResult: result, predictedTeamAGoals: parseInt(aGoals), predictedTeamBGoals: parseInt(bGoals), wildcardType: wildcard ?? undefined, chaosCardType: wildcard === "chaos_card" ? chaos : undefined, predictedGoesToET: isKnockout && result !== "draw" ? goesToET : undefined, predictedPenaltyWinner: isKnockout && result === "draw" ? penaltyWinner : undefined }),
     });
     const data = await res.json();
     setSubmitting(false);
@@ -216,6 +231,42 @@ export function PredictionForm({ match, existing, wildcardUsed = {}, underdogTea
                 </button>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Knockout extra options */}
+        {isKnockout && result && !ambiguous && (
+          <div style={{ marginTop: 14, borderTop: "1px solid var(--wc-border)", paddingTop: 14 }}>
+            {result !== "draw" ? (
+              <button
+                onClick={() => editable && setGoesToET(!goesToET)}
+                style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", background: goesToET ? "rgba(34,197,94,0.07)" : "var(--wc-surface-alt)", border: `1.5px solid ${goesToET ? "var(--wc-green)" : "var(--wc-border)"}`, borderRadius: 10, padding: "10px 14px", cursor: editable ? "pointer" : "not-allowed", transition: "all 0.15s" }}
+              >
+                <div style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${goesToET ? "var(--wc-green)" : "var(--wc-border)"}`, background: goesToET ? "var(--wc-green)" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.15s" }}>
+                  {goesToET && <span style={{ color: "#000", fontSize: 12, fontWeight: 900, lineHeight: 1 }}>✓</span>}
+                </div>
+                <div style={{ flex: 1, textAlign: "left" }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: goesToET ? "var(--wc-text-1)" : "var(--wc-text-2)" }}>Goes to Extra Time</div>
+                  <div style={{ fontSize: 11, color: "var(--wc-text-3)", marginTop: 1 }}>+1 pt if correct</div>
+                </div>
+                <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 99, background: "var(--wc-surface)", border: `1px solid ${goesToET ? "rgba(34,197,94,0.35)" : "var(--wc-border)"}`, color: goesToET ? "var(--wc-green)" : "var(--wc-text-3)" }}>+1</span>
+              </button>
+            ) : (
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--wc-text-3)", marginBottom: 8 }}>Penalty winner <span style={{ color: "var(--wc-red)" }}>*</span></div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {(["team_a", "team_b"] as const).map(side => {
+                    const team = side === "team_a" ? match.teamA : match.teamB;
+                    const active = penaltyWinner === side;
+                    return (
+                      <button key={side} onClick={() => editable && setPenaltyWinner(active ? null : side)} style={{ flex: 1, minHeight: 40, borderRadius: 10, background: active ? "rgba(34,197,94,0.08)" : "var(--wc-surface-alt)", border: `1.5px solid ${active ? "var(--wc-green)" : "var(--wc-border)"}`, color: active ? "var(--wc-green)" : "var(--wc-text-2)", fontSize: 13, fontWeight: 700, cursor: editable ? "pointer" : "not-allowed", transition: "all 0.15s" }}>
+                        {team.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

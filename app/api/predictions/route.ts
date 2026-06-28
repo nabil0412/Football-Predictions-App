@@ -9,14 +9,20 @@ export async function POST(req: NextRequest) {
   const dbUser = await getOrCreateDbUser();
   if (!dbUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-  const { matchId, predictedResult, predictedTeamAGoals, predictedTeamBGoals, wildcardType, chaosCardType } = await req.json();
+  const { matchId, predictedResult, predictedTeamAGoals, predictedTeamBGoals, wildcardType, chaosCardType, predictedGoesToET, predictedPenaltyWinner } = await req.json();
 
-  const { data: match } = await supabaseAdmin.from("matches").select("id, status, kickoff_time").eq("id", matchId).single();
+  const { data: match } = await supabaseAdmin.from("matches").select("id, status, kickoff_time, stage").eq("id", matchId).single();
   if (!match) return NextResponse.json({ error: "Match not found" }, { status: 404 });
   if (match.status !== "scheduled") return NextResponse.json({ error: "Predictions are locked" }, { status: 400 });
 
   const oneHourBefore = new Date(new Date(match.kickoff_time).getTime() - 60 * 60 * 1000);
   if (new Date() >= oneHourBefore) return NextResponse.json({ error: "Predictions lock 1 hour before kickoff" }, { status: 400 });
+
+  const KO_STAGES = ["round_of_32", "round_of_16", "quarter_final", "semi_final", "final"];
+  const isKnockout = KO_STAGES.includes(match.stage);
+  if (isKnockout && predictedResult === "draw" && !predictedPenaltyWinner) {
+    return NextResponse.json({ error: "Select who wins on penalties for knockout matches" }, { status: 400 });
+  }
 
   if (wildcardType) {
     const limit = WILDCARD_LIMITS[wildcardType as WildcardType];
@@ -62,6 +68,8 @@ export async function POST(req: NextRequest) {
     predicted_team_b_goals: predictedTeamBGoals,
     wildcard_type: wildcardType ?? null,
     chaos_card_type: chaosCardType ?? null,
+    predicted_goes_to_et: isKnockout && predictedResult !== "draw" ? (predictedGoesToET ?? false) : null,
+    predicted_penalty_winner: isKnockout && predictedResult === "draw" ? (predictedPenaltyWinner ?? null) : null,
     updated_at: new Date().toISOString(),
   }, { onConflict: "user_id,match_id" });
 
