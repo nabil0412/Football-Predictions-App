@@ -25,6 +25,7 @@ function mapStatus(apiStatus: string): "scheduled" | "live" | "finished" | null 
 }
 
 export async function POST(req: NextRequest) {
+  try {
   const cronSecret = req.headers.get("x-cron-secret");
   if (cronSecret !== process.env.CRON_SECRET) {
     const user = await currentUser();
@@ -148,6 +149,11 @@ export async function POST(req: NextRequest) {
   if (scored > 0) await redis.del(CACHE_KEYS.globalLeaderboard).catch(() => {});
 
   return NextResponse.json({ synced, scored, skipped, skippedDetails, ...(scoringErrors.length ? { scoringErrors } : {}) });
+  } catch (e) {
+    const msg = e instanceof Error ? `${e.message}\n${e.stack}` : String(e);
+    console.error("sync-matches uncaught error:", msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 }
 
 async function scoreMatch(
