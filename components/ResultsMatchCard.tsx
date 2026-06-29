@@ -28,7 +28,7 @@ function Flag({ iso, flagUrl, name, size = 36 }: { iso?: string | null; flagUrl?
 
 function WildcardIcon({ type }: { type: string }) {
   if (type === "confidence_pick") return <Crosshair size={11} />;
-  if (type === "underdog_pick") return <Zap size={11} />;
+  if (type === "underdog_pick" || type === "comeback_pick") return <Zap size={11} />;
   if (type === "chaos_card") return <Dices size={11} />;
   return null;
 }
