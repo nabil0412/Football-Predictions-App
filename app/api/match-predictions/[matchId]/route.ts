@@ -24,7 +24,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ mat
 
   const { data, error } = await supabaseAdmin
     .from("predictions")
-    .select("predicted_result, predicted_team_a_goals, predicted_team_b_goals, wildcard_type, points_earned, users(id, name)")
+    .select("predicted_result, predicted_team_a_goals, predicted_team_b_goals, wildcard_type, predicted_penalty_winner, points_earned, users(id, name)")
     .eq("match_id", id)
     .order("points_earned", { ascending: false, nullsFirst: false });
 
@@ -37,6 +37,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ mat
     predicted_team_a_goals: p.predicted_team_a_goals,
     predicted_team_b_goals: p.predicted_team_b_goals,
     wildcard_type: p.wildcard_type,
+    predicted_penalty_winner: p.predicted_penalty_winner ?? null,
     points_earned: p.points_earned,
   }));
 

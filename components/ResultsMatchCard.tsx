@@ -12,7 +12,8 @@ interface Match {
 interface Prediction {
   userId: number | null; name: string; predicted_result: string;
   predicted_team_a_goals: number; predicted_team_b_goals: number;
-  wildcard_type: string | null; points_earned: number | null;
+  wildcard_type: string | null; predicted_penalty_winner: "team_a" | "team_b" | null;
+  points_earned: number | null;
 }
 
 function initials(name: string) {
@@ -177,6 +178,11 @@ export function ResultsMatchCard({ match, currentUserId }: { match: Match; curre
                       <span style={{ fontSize: 13, fontWeight: 700, color: "var(--wc-text-1)", fontVariantNumeric: "tabular-nums" }}>
                         {p.predicted_team_a_goals}–{p.predicted_team_b_goals}
                       </span>
+                      {p.predicted_result === "draw" && p.predicted_penalty_winner && (
+                        <span style={{ fontSize: 10, color: "var(--wc-text-3)", fontWeight: 600, whiteSpace: "nowrap" }}>
+                          · {p.predicted_penalty_winner === "team_a" ? match.teamA.name : match.teamB.name} pens
+                        </span>
+                      )}
                     </div>
 
                     {/* Points */}
