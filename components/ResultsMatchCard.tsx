@@ -176,13 +176,10 @@ export function ResultsMatchCard({ match, currentUserId }: { match: Match; curre
                         <span style={{ color: "var(--wc-text-3)" }}><WildcardIcon type={p.wildcard_type} /></span>
                       )}
                       <span style={{ fontSize: 13, fontWeight: 700, color: "var(--wc-text-1)", fontVariantNumeric: "tabular-nums" }}>
-                        {p.predicted_team_a_goals}–{p.predicted_team_b_goals}
+                        <span style={{ color: p.predicted_result === "draw" && p.predicted_penalty_winner === "team_a" ? "var(--wc-green)" : "inherit" }}>{p.predicted_team_a_goals}</span>
+                        –
+                        <span style={{ color: p.predicted_result === "draw" && p.predicted_penalty_winner === "team_b" ? "var(--wc-green)" : "inherit" }}>{p.predicted_team_b_goals}</span>
                       </span>
-                      {p.predicted_result === "draw" && p.predicted_penalty_winner && (
-                        <span style={{ fontSize: 10, color: "var(--wc-text-3)", fontWeight: 600, whiteSpace: "nowrap" }}>
-                          · {p.predicted_penalty_winner === "team_a" ? match.teamA.name : match.teamB.name} pens
-                        </span>
-                      )}
                     </div>
 
                     {/* Points */}
