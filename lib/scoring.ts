@@ -180,7 +180,9 @@ export function calculateScore(
     }
   }
 
-  const etBonus = prediction.predictedGoesToET && options.wentToExtraTime && !options.penaltyWinner ? 1 : 0;
+  const etBonus = prediction.predictedGoesToET
+    ? (options.wentToExtraTime && !options.penaltyWinner ? 1 : -1)
+    : 0;
 
   return {
     ...base,
