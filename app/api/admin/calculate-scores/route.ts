@@ -3,6 +3,7 @@ import { currentUser } from "@clerk/nextjs/server";
 import { supabaseAdmin } from "@/lib/db";
 import { redis, CACHE_KEYS } from "@/lib/redis";
 import { calculateScore, CAPTAIN_STAGE_BONUS, type ChaosCardType } from "@/lib/scoring";
+import { recalcUserTotal } from "@/lib/recalc-user-total";
 
 const ADMIN_EMAIL = "abdelrahman.nabil04@gmail.com";
 
@@ -88,39 +89,7 @@ export async function POST(req: NextRequest) {
         .eq("match_id", matchId);
     }
 
-    const { data: agg } = await supabaseAdmin
-      .from("predictions")
-      .select("points_earned")
-      .eq("user_id", prediction.user_id)
-      .not("points_earned", "is", null);
-    const newTotal = (agg ?? []).reduce((s: number, p: { points_earned: number }) => s + p.points_earned, 0);
-    await supabaseAdmin.from("users").update({ total_score: newTotal }).eq("id", prediction.user_id);
-  }
-
-  // Captain stage bonuses — only for KO rounds with a clear winner
-  const koStages = ["round_of_32", "round_of_16", "quarter_final", "semi_final", "final"];
-  if (koStages.includes(match.stage) && match.team_a_score !== match.team_b_score) {
-    const winningTeamId = match.team_a_score > match.team_b_score
-      ? match.team_a_id
-      : match.team_b_id;
-
-    const stageBonus = CAPTAIN_STAGE_BONUS[match.stage] ?? 0;
-    const winnerBonus = match.stage === "final" ? CAPTAIN_STAGE_BONUS["wins_world_cup"] ?? 0 : 0;
-    const totalCaptainBonus = stageBonus + winnerBonus;
-
-    if (totalCaptainBonus > 0) {
-      const { data: captainUsers } = await supabaseAdmin
-        .from("users")
-        .select("id, total_score")
-        .eq("captain_team_id", winningTeamId);
-
-      for (const user of captainUsers ?? []) {
-        await supabaseAdmin
-          .from("users")
-          .update({ total_score: user.total_score + totalCaptainBonus })
-          .eq("id", user.id);
-      }
-    }
+    await recalcUserTotal(prediction.user_id);
   }
 
   await redis.del(CACHE_KEYS.globalLeaderboard).catch(() => {});
