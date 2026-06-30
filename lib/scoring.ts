@@ -107,11 +107,15 @@ export function calculateScore(
 ): ScoreBreakdown {
   const base = calculateBaseScore(prediction, actual);
 
-  // If predicted a winner but match went to penalties and that team won on pens → 2 pts not 3
   const penWinner = options.penaltyWinner;
+  // Predicted winner but match went to pens and that team won → 2 pts (right winner, wrong method)
   const predictedWinsViaPens = prediction.predictedResult !== "draw" && penWinner &&
     prediction.predictedResult === (penWinner === "team_a" ? "team_a_win" : "team_b_win");
-  const resultPoints = predictedWinsViaPens ? 2 : base.resultPoints;
+  // Predicted draw but wrong penalty winner → 2 pts (right outcome, wrong winner)
+  const wrongPenaltyWinner = prediction.predictedResult === "draw" &&
+    prediction.predictedPenaltyWinner && penWinner &&
+    prediction.predictedPenaltyWinner !== penWinner;
+  const resultPoints = (predictedWinsViaPens || wrongPenaltyWinner) ? 2 : base.resultPoints;
   const perfectBonus = resultPoints > 0 && base.teamAGoalPoints > 0 && base.teamBGoalPoints > 0 ? 1 : 0;
 
   const baseTotal =
