@@ -111,11 +111,11 @@ export function calculateScore(
   // Predicted winner but match went to pens and that team won → 2 pts (right winner, wrong method)
   const predictedWinsViaPens = prediction.predictedResult !== "draw" && penWinner &&
     prediction.predictedResult === (penWinner === "team_a" ? "team_a_win" : "team_b_win");
-  // Predicted draw but wrong penalty winner → 2 pts (right outcome, wrong winner)
+  // Predicted draw but wrong penalty winner → 0 pts
   const wrongPenaltyWinner = prediction.predictedResult === "draw" &&
     prediction.predictedPenaltyWinner && penWinner &&
     prediction.predictedPenaltyWinner !== penWinner;
-  const resultPoints = (predictedWinsViaPens || wrongPenaltyWinner) ? 2 : base.resultPoints;
+  const resultPoints = wrongPenaltyWinner ? 0 : predictedWinsViaPens ? 2 : base.resultPoints;
   const perfectBonus = resultPoints > 0 && base.teamAGoalPoints > 0 && base.teamBGoalPoints > 0 ? 1 : 0;
 
   const baseTotal =
