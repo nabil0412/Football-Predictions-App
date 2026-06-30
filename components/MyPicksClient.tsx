@@ -181,19 +181,7 @@ export function MyPicksClient({ predictions, matches, teams, serverTotal }: { pr
   const finished = predictions.filter(p => matchMap[p.match_id]?.status === "finished" || p.points_earned !== null);
   const upcoming = predictions.filter(p => !finished.includes(p));
 
-  // Calculate total from displayed values so it matches what each row shows
-  const calculatedTotal = predictions.reduce((sum, p) => {
-    if (p.points_earned !== null) return sum + p.points_earned;
-    const m = matchMap[p.match_id];
-    if (!m || m.team_a_score === null || m.team_b_score === null) return sum;
-    const cr = (m.team_a_score > m.team_b_score && p.predicted_result === "team_a_win") ||
-               (m.team_b_score > m.team_a_score && p.predicted_result === "team_b_win") ||
-               (m.team_a_score === m.team_b_score && p.predicted_result === "draw");
-    const ca = p.predicted_team_a_goals === Math.min(m.team_a_score, 4);
-    const cb = p.predicted_team_b_goals === Math.min(m.team_b_score, 4);
-    return sum + (cr ? 3 : 0) + (ca ? 1 : 0) + (cb ? 1 : 0) + (cr && ca && cb ? 1 : 0);
-  }, 0);
-  const totalPts = Math.max(calculatedTotal, serverTotal);
+  const totalPts = serverTotal;
   const current = tab === "upcoming" ? upcoming : finished;
 
   const tabStyle = (id: string): React.CSSProperties => ({
