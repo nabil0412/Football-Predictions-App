@@ -7,6 +7,7 @@ interface Team { id: number; name: string; flag_url: string | null; iso_code?: s
 interface Match {
   id: number; kickoff_time: string; status: string; stage: string; matchday: number | null;
   team_a_score: number | null; team_b_score: number | null;
+  penalty_score_a: number | null; penalty_score_b: number | null;
   teamA: Team; teamB: Team;
 }
 interface Prediction {
@@ -105,8 +106,15 @@ export function ResultsMatchCard({ match, currentUserId }: { match: Match; curre
 
           <div style={{ textAlign: "center", minWidth: 72 }}>
             {(isFinished || isLive) && match.team_a_score !== null ? (
-              <div style={{ fontSize: 26, fontWeight: 900, color: "var(--wc-text-1)", letterSpacing: "-0.04em", fontVariantNumeric: "tabular-nums" }}>
-                {match.team_a_score} – {match.team_b_score}
+              <div>
+                <div style={{ fontSize: 26, fontWeight: 900, color: "var(--wc-text-1)", letterSpacing: "-0.04em", fontVariantNumeric: "tabular-nums" }}>
+                  {match.team_a_score} – {match.team_b_score}
+                </div>
+                {match.penalty_score_a != null && match.penalty_score_b != null && (
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "var(--wc-text-3)", marginTop: 2, fontVariantNumeric: "tabular-nums" }}>
+                    ({match.penalty_score_a}–{match.penalty_score_b} pens)
+                  </div>
+                )}
               </div>
             ) : (
               <div style={{ fontSize: 13, fontWeight: 700, color: "var(--wc-text-3)" }}>{time}</div>

@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 type RawMatch = {
   id: number; kickoff_time: string; status: string; stage: string; matchday: number | null;
   team_a_score: number | null; team_b_score: number | null; team_a_id: number; team_b_id: number;
+  penalty_score_a: number | null; penalty_score_b: number | null;
 };
 type RawTeam = { id: number; name: string; flag_url: string | null; iso_code: string | null };
 
@@ -22,14 +23,14 @@ export default async function ResultsPage() {
   const [{ data: finishedRaw }, { data: scheduledRaw }, { data: allTeams }, dbUser] = await Promise.all([
     supabaseAdmin
       .from("matches")
-      .select("id, kickoff_time, status, stage, matchday, team_a_score, team_b_score, team_a_id, team_b_id")
+      .select("id, kickoff_time, status, stage, matchday, team_a_score, team_b_score, team_a_id, team_b_id, penalty_score_a, penalty_score_b")
       .eq("status", "finished")
       .not("team_a_score", "is", null)
       .order("kickoff_time", { ascending: false })
       .limit(30),
     supabaseAdmin
       .from("matches")
-      .select("id, kickoff_time, status, stage, matchday, team_a_score, team_b_score, team_a_id, team_b_id")
+      .select("id, kickoff_time, status, stage, matchday, team_a_score, team_b_score, team_a_id, team_b_id, penalty_score_a, penalty_score_b")
       .in("status", ["live", "scheduled"])
       .order("kickoff_time"),
     supabaseAdmin.from("teams").select("id, name, flag_url, iso_code"),

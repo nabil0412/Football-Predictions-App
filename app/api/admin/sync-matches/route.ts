@@ -84,14 +84,17 @@ export async function POST(req: NextRequest) {
       skipped++; continue;
     }
 
-    const homeScore = status === "finished" ? (m.score.fullTime.home ?? null) : null;
-    const awayScore = status === "finished" ? (m.score.fullTime.away ?? null) : null;
-    const wentToET = status === "finished" && m.score.extraTime?.home != null;
     const penaltyHome = m.score.penalties?.home ?? null;
     const penaltyAway = m.score.penalties?.away ?? null;
-    const penaltyWinner = penaltyHome != null && penaltyAway != null
-      ? (penaltyHome > penaltyAway ? "team_a" : "team_b")
+    const hasPenalties = penaltyHome != null && penaltyAway != null;
+    const penaltyWinner = hasPenalties
+      ? (penaltyHome! > penaltyAway! ? "team_a" : "team_b")
       : null;
+    // For penalty matches the API puts shootout scores in fullTime — use regularTime (90min) instead
+    const gameScore = hasPenalties && m.score.regularTime ? m.score.regularTime : m.score.fullTime;
+    const homeScore = status === "finished" ? (gameScore.home ?? null) : null;
+    const awayScore = status === "finished" ? (gameScore.away ?? null) : null;
+    const wentToET = status === "finished" && m.score.extraTime?.home != null;
     const apiStage = mapApiStageToDb(m.stage);
     // Temporary: API reports GROUP_STAGE for KO matches — override by date until fixed
     const stage = (apiStage === "group" && new Date(m.utcDate) >= new Date("2026-06-29T00:00:00Z"))
@@ -115,7 +118,7 @@ export async function POST(req: NextRequest) {
       team_a_score: finalStatus === "finished" ? (homeScore ?? existing?.team_a_score ?? null) : homeScore,
       team_b_score: finalStatus === "finished" ? (awayScore ?? existing?.team_b_score ?? null) : awayScore,
       matchday: m.matchday ?? null,
-      ...(finalStatus === "finished" ? { went_to_extra_time: wentToET, penalty_winner: penaltyWinner } : {}),
+      ...(finalStatus === "finished" ? { went_to_extra_time: wentToET, penalty_winner: penaltyWinner, penalty_score_a: penaltyHome, penalty_score_b: penaltyAway } : {}),
     });
 
     const justBecameFinished = status === "finished" && existing?.status !== "finished";
